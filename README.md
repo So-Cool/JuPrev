@@ -34,9 +34,7 @@ Requires MacOS 14 (Sonoma) or later on Apple Silicon or Intel.
 >   ```
 >
 > Homebrew removes the quarantine attribute after installing the app,
-> so MacOS opens it without the warning;
-> it also registers the Quick Look extensions and restarts the thumbnail
-> service.
+> so MacOS opens it without the warning.
 
 ### Manual
 
@@ -55,6 +53,12 @@ pkill -f com.apple.quicklook.ThumbnailsAgent             # allows thumbnails to 
 brew tap So-Cool/tap
 brew install --cask juprev
 ```
+
+Then open JuPrev once, after every install or upgrade:
+that registers its Quick Look previews and Finder thumbnails.
+After a fresh install, thumbnails appear once you log out and back in, or
+straight away after `pkill -f com.apple.quicklook.ThumbnailsAgent`.
+Homebrew prints this reminder too.
 
 ## Use
 
@@ -103,11 +107,6 @@ the rules above decide which ones.
 
 ## To do
 
-- [ ] Confirm the WebKit security tests (`ContentSecurityPolicyTests`) pass on
-      GitHub's macOS runners.
-- [ ] Confirm the cask's `open` and `pkill` install steps work inside
-      Homebrew's sandbox on the first real install
-      (both are allowed to fail so they can't break it).
 - [ ] Marked-style features:
       live reload, an outline sidebar, show/hide code and outputs, themes,
       HTML/PDF export.
@@ -239,6 +238,31 @@ Notes:
   about 260 ms until a typical notebook shows;
   about 1.3 s for the 25 MB one, returning from `preparePreviewOfFile` on
   `didCommit` so large pages paint progressively.
+
+### Release addendum: What a Homebrew cask can and can't do
+
+Learned from the first release (0.1, installed with Homebrew 7.0):
+
+- Cask `postflight_steps` always run in Homebrew's sandbox.
+  `xattr` works, but `open` fails with `kLSUnknownErr` (-10810,
+  "Couldn't communicate with a helper application") and `pkill` can't signal
+  the thumbnail service.
+  Only `sudo` steps run outside the sandbox, which would mean a password prompt
+  and launching the app as root.
+- The extensions register only when the app is **launched**.
+  Moving it to `/Applications` registers the app with LaunchServices but not
+  its extensions and `lsregister -f` doesn't register them either.
+  Replacing or unregistering the app drops them again,
+  so they're gone after an upgrade until the next launch.
+- The thumbnail service (`com.apple.quicklook.ThumbnailsAgent`) only picks up
+  *new* thumbnail extensions when it restarts;
+  it keeps known ones across reinstalls.
+  `killall` can't match its name (process names are cut to 16 characters),
+  so use `pkill -f` or `kill <pid>`.
+
+So the cask only removes the quarantine attribute and uses `caveats` to ask
+the user to open the app once and, after a fresh install, restart the
+thumbnail service.
 
 ## License
 
