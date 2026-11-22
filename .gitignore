@@ -1,0 +1,7 @@
+node_modules/
+build/
+spike/renderer/out/
+*.xcodeproj/xcuserdata/
+.DS_Store
+.build/
+.swiftpm/
