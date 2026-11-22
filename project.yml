@@ -6,7 +6,7 @@ options:
   createIntermediateGroups: true
 settings:
   base:
-    # Ad-hoc signing: distributed via a Homebrew tap, not the App Store (see docs/design-notes.md).
+    # Ad-hoc signing: distributed via a Homebrew tap, not the App Store (see README.md#design-notes).
     CODE_SIGN_IDENTITY: "-"
     CODE_SIGN_STYLE: Manual
     DEVELOPMENT_TEAM: ""
