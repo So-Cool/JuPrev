@@ -56,6 +56,11 @@ public final class NotebookRenderer {
 
     public static let stylesheet: String = loadResource("style", "css")
 
+    /// A styled page explaining why a notebook couldn't be shown.
+    public static func errorPage(title: String, message: String) -> String {
+        PageTemplate.errorDocument(title: title, message: message)
+    }
+
     public init() throws {
         guard let context = JSContext() else { throw NotebookRenderError.rendererFailure("JavaScriptCore unavailable") }
         self.context = context

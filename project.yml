@@ -1,0 +1,87 @@
+name: JuPrev
+options:
+  bundleIdPrefix: ch.usi.kacper.juprev
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    # Ad-hoc signing: distributed via a Homebrew tap, not the App Store (see spike/FINDINGS.md).
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+    # Only needed for notarization, and it would deny JavaScriptCore its JIT.
+    ENABLE_HARDENED_RUNTIME: NO
+    SWIFT_VERSION: "5.10"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  JuPrev:
+    path: .
+targets:
+  JuPrev:
+    type: application
+    platform: macOS
+    sources: [App]
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: ch.usi.kacper.juprev
+    dependencies:
+      - target: JuPrevQuickLook
+      - package: JuPrev
+        product: NotebookKit
+    entitlements:
+      path: App/JuPrev.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.files.user-selected.read-only: true
+        # Shared settings file read by the Quick Look extension (App Groups need a team ID).
+        com.apple.security.temporary-exception.files.home-relative-path.read-write:
+          - /Library/Application Support/JuPrev/
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: JuPrev
+        LSApplicationCategoryType: public.app-category.developer-tools
+        NSHumanReadableCopyright: ""
+        UTImportedTypeDeclarations:
+          - UTTypeIdentifier: org.jupyter.ipynb
+            UTTypeDescription: Jupyter Notebook
+            UTTypeConformsTo: [public.json, public.text, public.data]
+            UTTypeTagSpecification:
+              public.filename-extension: [ipynb]
+              public.mime-type: [application/x-ipynb+json]
+  JuPrevQuickLook:
+    type: app-extension
+    platform: macOS
+    sources: [QuickLook]
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: ch.usi.kacper.juprev.quicklook
+    dependencies:
+      - package: JuPrev
+        product: NotebookKit
+      - sdk: QuickLookUI.framework
+      - sdk: WebKit.framework
+    entitlements:
+      path: QuickLook/JuPrevQuickLook.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        # Read-only everywhere so markdown images next to the notebook can load and the
+        # shared settings file can be read. Which images actually load is decided by
+        # NotebookKit's LocalImageResolver (notebook folder and below by default).
+        com.apple.security.temporary-exception.files.absolute-path.read-only: ["/"]
+        # WKWebView's helper processes crash in a sandboxed extension without this. Pages
+        # still can't reach the network: a content rule list blocks every URL load.
+        com.apple.security.network.client: true
+    info:
+      path: QuickLook/Info.plist
+      properties:
+        CFBundleDisplayName: JuPrev Quick Look
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.quicklook.preview
+          # View-based: we own the WKWebView so JavaScript can be switched off (data-based
+          # HTML previews ignore the page's CSP and run notebook scripts).
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PreviewViewController
+          NSExtensionAttributes:
+            QLIsDataBasedPreview: false
+            QLSupportsSearchableItems: false
+            QLSupportedContentTypes: [org.jupyter.ipynb]

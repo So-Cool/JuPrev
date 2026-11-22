@@ -30,6 +30,19 @@ enum PageTemplate {
         """
     }
 
+    static func errorDocument(title: String, message: String) -> String {
+        document(
+            title: title,
+            body: """
+            <div class="render-error">
+            <h1>\(escape(title))</h1>
+            <p>\(escape(message))</p>
+            </div>
+            """,
+            allowScripts: false
+        )
+    }
+
     static func escape(_ s: String) -> String {
         s.replacingOccurrences(of: "&", with: "&amp;")
             .replacingOccurrences(of: "<", with: "&lt;")

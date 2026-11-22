@@ -27,3 +27,18 @@ Throwaway code: `renderer/` (JS bundle + JavaScriptCore benchmark) and `xcode/` 
 2. **Security: scripts in notebook outputs *will* run in Quick Look.** Phase 2 must add a CSP `<meta>` (`script-src 'none'`, no network) and verify that it actually blocks inline scripts.
 3. **Images next to the notebook:** use the read-only temporary exception in both the extension and the app. Decide between home-relative and absolute paths, since home-relative doesn't cover `/Volumes/...`.
 4. **CSS:** markdown images need `max-width: 100%`. They currently overflow.
+
+## Phase 2 addendum: data-based previews ignore CSP
+
+Tested in phase 2 with `Tests/NotebookKitTests/Fixtures/csp-probe.ipynb`. In a data-based
+(`QLPreviewReply`) HTML preview, the page's `<meta http-equiv="Content-Security-Policy">`
+is **ignored**: `<script>`, `onload` and `ontoggle` all ran in Quick Look, though the same
+page is protected in a regular WKWebView. The extension is therefore **view-based**: it hosts
+its own WKWebView with `allowsContentJavaScript = false` and a content rule list that blocks
+all URL loads (`NotebookKit/StaticWebView.swift`). Notes:
+
+- A WKWebView in a sandboxed extension needs `com.apple.security.network.client`, or its
+  WebContent and Networking processes crash. The rule list still blocks every load.
+- WebKit content-rule `url-filter` regexes don't support `|`; use one rule per scheme.
+- Timings (Low Power Mode, on battery): about 260 ms until a typical notebook shows; about 1.3 s for the 25 MB one,
+  returning from `preparePreviewOfFile` on `didCommit` so large pages paint progressively.
