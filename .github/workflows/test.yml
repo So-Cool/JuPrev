@@ -2,7 +2,7 @@ name: Test
 
 on:
   push:
-    branches: [main, dev]
+    branches: [master, dev]
   pull_request:
 
 concurrency:
@@ -19,14 +19,14 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.4.app
 
-      # render.js and style.css are committed build products of renderer/;
-      # fail if they weren't rebuilt after a change to its sources.
+      # render.js, style.css and the licence notices are committed build products
+      # of renderer/; fail if they weren't rebuilt after a change to its sources.
       - name: Check the renderer bundle is up to date
         working-directory: renderer
         run: |
           npm ci
           npm run build
-          git diff --exit-code --stat -- ../Sources/NotebookKit/Resources
+          git diff --exit-code --stat -- ../Sources/NotebookKit/Resources ../THIRD_PARTY_NOTICES.md ../App/Credits.html
 
       - name: Test NotebookKit
         run: swift test

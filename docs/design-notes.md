@@ -1,8 +1,9 @@
-# Phase 0 spike — findings (2026-11-22, macOS 15.5, Xcode 16.4)
+# Design notes
 
-Throwaway code: `renderer/` (JS bundle + JavaScriptCore benchmark) and `xcode/` (XcodeGen app + data-based Quick Look preview extension, ad-hoc signed).
+Why JuPrev is built the way it is. Recorded from a feasibility spike and the early
+phases (2026-11-22, macOS 15.5, Xcode 16.4); the spike's code is in git history.
 
-## Results
+## Spike results
 
 | Question | Answer |
 |---|---|
@@ -14,14 +15,16 @@ Throwaway code: `renderer/` (JS bundle + JavaScriptCore benchmark) and `xcode/` 
 | Images stored next to the notebook (`![](../img/x.png)`) | Blocked by the sandbox by default. **Allowed** with `com.apple.security.temporary-exception.files.home-relative-path.read-only = ["/"]`. Fine for Homebrew distribution; the App Store would reject it. |
 | Sharing settings between the app and the extension | **App Groups don't work with ad-hoc signing.** Xcode refuses to build without a provisioning profile. Signing by hand builds, but on first launch macOS 15 shows "JuPrevSpike would like to access data from other apps", and the write never happens until it's answered. **A plain file works:** the app writes `~/Library/Application Support/<App>/settings.json` (read-write temporary exception for that folder only), and the extension reads it through its read-only exception. No dialog, verified. Note: inside the sandbox `NSHomeDirectory()` is the container, so the real home comes from `getpwuid(getuid())`. |
 
-## Gotchas found
+## Gotchas
 
 - **`reply.stringEncoding = .utf8` is required.** Without it the HTML preview came up blank.
 - `log` is a zsh builtin, so use `/usr/bin/log show --predicate 'subsystem == "…"'` to read extension logs.
 - An old build in DerivedData stays registered with LaunchServices. Run `lsregister -u` on it so the installed copy is the one that's used.
 - Bundle IDs: the extension's ID must start with the app's ID.
 
-## Consequences for the plan
+## Consequences drawn at the time
+
+Items 2 and 4 have since been resolved: see the phase 2 addendum below and `renderer/styles/notebook.css`.
 
 1. **Keep the JavaScriptCore pre-render.** It's fast, produces one static HTML for the app, Quick Look and export, and works without a DOM.
 2. **Security: scripts in notebook outputs *will* run in Quick Look.** Phase 2 must add a CSP `<meta>` (`script-src 'none'`, no network) and verify that it actually blocks inline scripts.
