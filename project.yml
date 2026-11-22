@@ -25,6 +25,7 @@ targets:
     sources: [App]
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: me.kcpr.juprev
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - target: JuPrevQuickLook
       - target: JuPrevThumbnail
