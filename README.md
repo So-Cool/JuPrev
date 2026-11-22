@@ -2,9 +2,20 @@
 
 A minimal native macOS viewer and Quick Look extension for Jupyter notebooks.
 
-Status: phase 3 of 5 — the shared renderer (`NotebookKit`), the `juprev` CLI, the
-Quick Look extension and a minimal viewer app. Thumbnails and Homebrew distribution
-come next, then Marked-style features (live reload, outline, themes, export). `spike/` holds the throwaway
+Status: phase 4 of 5 — renderer (`NotebookKit`), `juprev` CLI, Quick Look previews and
+Finder thumbnails, a minimal viewer app, and Homebrew packaging. Marked-style features
+(live reload, outline, themes, export) come next.
+
+## Install
+
+```sh
+brew tap So-Cool/tap
+brew install --cask juprev
+```
+
+JuPrev is ad-hoc signed, not notarized; the cask removes the quarantine flag so
+Gatekeeper lets it run, registers the Quick Look extensions and restarts the
+thumbnail service. Requires macOS 14 (Sonoma) or later. `spike/` holds the throwaway
 feasibility spike; see `spike/FINDINGS.md`.
 
 ## Layout
@@ -15,6 +26,7 @@ feasibility spike; see `spike/FINDINGS.md`.
 | `Sources/NotebookKit/` | Runs the JS bundle in JavaScriptCore and produces a self-contained static HTML page (strict CSP, images and fonts inlined). Also owns the local-image folder policy and the shared settings file. |
 | `Sources/juprev/` | CLI: `juprev render notebook.ipynb -o out.html` |
 | `QuickLook/` | View-based Quick Look extension: JavaScript off, network blocked (`NotebookWebView`). |
+| `Thumbnail/` | Finder thumbnails: title, opening text and first plot, drawn from `NotebookSummary` (no web view). |
 | `App/` | AppKit document-based viewer: one window per notebook, "Allow Scripts" bar for interactive outputs, Settings window. Registers as an *alternate* handler for `org.jupyter.ipynb`. |
 | `project.yml` | XcodeGen spec for the app and extension (`JuPrev.xcodeproj` is generated, not committed). |
 | `Tests/NotebookKitTests/` | Swift Testing suite, fixture notebooks (`Fixtures/make_fixtures.py`) and HTML snapshots. |
@@ -32,11 +44,19 @@ swift run juprev render path/to/notebook.ipynb -o /tmp/out.html --time
 # after an intended rendering change
 JUPREV_RECORD_SNAPSHOTS=1 swift test
 
-# build, install to ~/Applications and register the Quick Look extension (needs xcodegen)
+# build, install to ~/Applications and register the Quick Look extensions (needs xcodegen)
 scripts/install-dev.sh
 qlmanage -p path/to/notebook.ipynb
-/usr/bin/log stream --predicate 'subsystem == "ch.usi.kacper.juprev.quicklook"'
+/usr/bin/log stream --predicate 'subsystem == "me.kcpr.juprev.quicklook"'
 ```
+
+## Release
+
+1. Bump `MARKETING_VERSION` in `project.yml`.
+2. `scripts/release.sh` runs the tests, builds a universal ad-hoc signed app into
+   `dist/JuPrev-<version>.zip` and prints its sha256 plus the tag/release commands.
+3. Update `version` and `sha256` in `Casks/juprev.rb` in
+   [So-Cool/homebrew-tap](https://github.com/So-Cool/homebrew-tap).
 
 ## Scripts and remote content
 

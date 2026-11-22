@@ -3,7 +3,7 @@ import NotebookKit
 import os
 import WebKit
 
-private let logger = Logger(subsystem: "ch.usi.kacper.juprev", category: "viewer")
+private let logger = Logger(subsystem: "me.kcpr.juprev", category: "viewer")
 
 /// Shows one rendered notebook, with the interactive-outputs bar above it.
 final class NotebookViewController: NSViewController {

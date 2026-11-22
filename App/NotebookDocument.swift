@@ -25,7 +25,7 @@ final class NotebookDocument: NSDocument {
 final class RenderService: @unchecked Sendable {
     static let shared = RenderService()
 
-    private let queue = DispatchQueue(label: "ch.usi.kacper.juprev.render", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "me.kcpr.juprev.render", qos: .userInitiated)
     private var renderer: NotebookRenderer?
 
     func render(_ data: Data, fileURL: URL?, options: RenderOptions) async -> Result<RenderedNotebook, Error> {

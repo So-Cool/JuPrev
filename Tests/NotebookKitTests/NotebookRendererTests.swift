@@ -220,3 +220,65 @@ struct SettingsTests {
         #expect(!path.contains("/Library/Containers/"))
     }
 }
+
+struct NotebookSummaryTests {
+    func summary(_ name: String) throws -> NotebookSummary {
+        try NotebookSummary(data: Data(contentsOf: fixtures.appendingPathComponent(name)))
+    }
+
+    @Test func takesTitleAndPlainTextFromMarkdown() throws {
+        let s = try summary("markdown-math.ipynb")
+        #expect(s.title == "Markdown and math")
+        #expect(s.lines.first == "Inline a_i * b_i and x_{1}^2 keep their underscores and stars.")
+        #expect(s.lines.count == 6)
+        #expect(!s.lines.contains { $0.contains("](") || $0.contains("<") })
+        #expect(s.cellCount == 9)
+    }
+
+    @Test func findsFirstImageOutput() throws {
+        let s = try summary("outputs.ipynb")
+        #expect(s.title == nil)
+        let png = try #require(s.firstImage)
+        #expect(png.prefix(4) == Data([0x89, 0x50, 0x4E, 0x47]))
+    }
+
+    @Test func svgOutputsAreSkipped() throws {
+        let nb = #"{"nbformat": 4, "metadata": {}, "cells": [{"cell_type": "code", "outputs": [{"output_type": "display_data", "data": {"image/svg+xml": "<svg/>"}}]}]}"#
+        #expect(try NotebookSummary(data: Data(nb.utf8)).firstImage == nil)
+    }
+
+    @Test func displayMathAndCodeBlocksAreDropped() throws {
+        let s = try summary("markdown-math.ipynb")
+        let text = s.lines.joined(separator: " ")
+        #expect(!text.contains("\\sum") && !text.contains("begin{align}") && !text.contains("not math$$"))
+        #expect(text.contains("Display:"))
+    }
+
+    @Test func scriptsAndAttributesDontLeakIntoText() throws {
+        let s = try summary("csp-probe.ipynb")
+        #expect(s.title == "CSP probe")
+        #expect(!s.lines.contains { $0.contains("SCRIPT RAN:") || $0.contains("insertAdjacentHTML") || $0.contains("width=") })
+    }
+
+    @Test func rejectsNonNotebooks() {
+        #expect(throws: (any Error).self) { try NotebookSummary(data: Data("[1, 2]".utf8)) }
+        #expect(throws: (any Error).self) { try NotebookSummary(data: Data()) }
+    }
+
+    @Test func plainTextStripsMarkup() {
+        #expect(NotebookSummary.plainText("- see [the docs](https://x.y) and **bold** `code`") == "see the docs and bold code")
+        #expect(NotebookSummary.plainText("| a | b |") == "")
+        #expect(NotebookSummary.plainText("![img](a.png)") == "")
+        #expect(NotebookSummary.plainText("_emphasis_ keeps snake_case") == "emphasis keeps snake_case")
+        #expect(NotebookSummary.plainText(#"Prices like \$5 and \$10, and \(\alpha_1\)"#) == #"Prices like $5 and $10, and \alpha_1"#)
+        #expect(NotebookSummary.plainText("(text:meta-explainers:tabular)=") == "")
+        #expect(NotebookSummary.plainText(":label:`sec_intro` See {cite}`smith` here") == "See  here")
+    }
+
+    @Test func headingsDropClosingHashes() {
+        #expect(NotebookSummary.heading("# Explanation Generation #") == "Explanation Generation")
+        #expect(NotebookSummary.heading("## C# tips") == "C# tips")
+        #expect(NotebookSummary.heading("#hashtag") == nil)
+        #expect(NotebookSummary.heading("plain") == nil)
+    }
+}

@@ -56,7 +56,7 @@ public enum NotebookWebView {
         if let rules = cachedRules[remoteImages] { return rules }
         guard let store = WKContentRuleListStore.default() else { throw CocoaError(.featureUnsupported) }
         let rules = try await store.compileContentRuleList(
-            forIdentifier: remoteImages ? "ch.usi.kacper.juprev.block-network-but-images" : "ch.usi.kacper.juprev.block-network",
+            forIdentifier: remoteImages ? "me.kcpr.juprev.block-network-but-images" : "me.kcpr.juprev.block-network",
             encodedContentRuleList: remoteImages ? blockAllButHTTPSImagesRulesJSON : blockAllRulesJSON
         )
         guard let rules else { throw CocoaError(.featureUnsupported) }
