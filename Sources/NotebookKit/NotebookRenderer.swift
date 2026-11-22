@@ -3,17 +3,25 @@ import JavaScriptCore
 
 public struct RenderOptions: Equatable, Sendable {
     public var localImages: LocalImagePolicy
+    /// Keep `https://` image URLs (and allow them in the page's CSP) instead of placeholders.
+    public var remoteImages: Bool
     /// Render `text/html` outputs that contain scripts as-is and relax the page's CSP.
-    /// Off by default: notebooks are untrusted, and Quick Look runs scripts.
+    /// Off by default: notebooks are untrusted.
     public var allowScripts: Bool
 
-    public init(localImages: LocalImagePolicy = .notebookFolder, allowScripts: Bool = false) {
+    public init(localImages: LocalImagePolicy = .notebookFolder, remoteImages: Bool = false, allowScripts: Bool = false) {
         self.localImages = localImages
+        self.remoteImages = remoteImages
         self.allowScripts = allowScripts
     }
 
-    public init(settings: JuPrevSettings, allowScripts: Bool = false) {
-        self.init(localImages: settings.localImagePolicy, allowScripts: allowScripts)
+    /// Options for the app. Quick Look ignores `loadRemoteImages` and never loads remote content.
+    public init(settings: JuPrevSettings, remoteImages: Bool? = nil, allowScripts: Bool = false) {
+        self.init(
+            localImages: settings.localImagePolicy,
+            remoteImages: remoteImages ?? settings.loadRemoteImages,
+            allowScripts: allowScripts
+        )
     }
 }
 
@@ -104,7 +112,7 @@ public final class NotebookRenderer {
         currentResolver = notebookFolder.map { LocalImageResolver(notebookFolder: $0, policy: options.localImages) }
         defer { currentResolver = nil }
 
-        let optionsJSON = #"{"allowScripts":\#(options.allowScripts)}"#
+        let optionsJSON = #"{"allowScripts":\#(options.allowScripts),"remoteImages":\#(options.remoteImages)}"#
         context.exception = nil
         let result = renderFunction.call(withArguments: [json, optionsJSON])
         if let exception = context.exception {
@@ -117,7 +125,7 @@ public final class NotebookRenderer {
 
         let title = payload.title ?? fallbackTitle
         return RenderedNotebook(
-            html: PageTemplate.document(title: title ?? "Notebook", body: payload.html, allowScripts: options.allowScripts),
+            html: PageTemplate.document(title: title ?? "Notebook", body: payload.html, options: options),
             bodyHTML: payload.html,
             title: title,
             language: payload.language,

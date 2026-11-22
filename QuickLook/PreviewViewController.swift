@@ -10,7 +10,7 @@ private let logger = Logger(subsystem: "ch.usi.kacper.juprev.quicklook", categor
 ///
 /// Data-based HTML previews ignore the page's Content-Security-Policy, so notebook HTML
 /// could run scripts inside Finder previews. Owning the web view lets us switch JavaScript
-/// off entirely and block every network load (see `StaticWebView`).
+/// off entirely and block every network load (see `NotebookWebView`).
 final class PreviewViewController: NSViewController, QLPreviewingController {
     private var webView: WKWebView?
     private var loadWaiter: LoadWaiter?
@@ -26,7 +26,8 @@ final class PreviewViewController: NSViewController, QLPreviewingController {
         do {
             if sharedRenderer == nil { sharedRenderer = try NotebookRenderer() }
             // Read on every preview so changes made in the app apply without restarting Quick Look.
-            let options = RenderOptions(settings: JuPrevSettings.load())
+            // Quick Look never loads remote content, whatever the app's setting says.
+            let options = RenderOptions(settings: JuPrevSettings.load(), remoteImages: false)
             let result = try sharedRenderer!.render(fileURL: url, options: options)
             return (result.html, "\(result.cellCount) cells, \(result.html.utf8.count / 1024) KB, images: \(options.localImages.rawValue)")
         } catch {
@@ -46,7 +47,7 @@ final class PreviewViewController: NSViewController, QLPreviewingController {
         let renderedAt = Date()
 
         // Fails closed: without the network-blocking rules there is no preview.
-        let webView = WKWebView(frame: view.bounds, configuration: try await StaticWebView.makeConfiguration())
+        let webView = WKWebView(frame: view.bounds, configuration: try await NotebookWebView.makeConfiguration(.static(remoteImages: false)))
         webView.autoresizingMask = [.width, .height]
         webView.navigationDelegate = self
         webView.setValue(false, forKey: "drawsBackground") // no white flash in dark mode before the page paints
@@ -69,17 +70,13 @@ final class PreviewViewController: NSViewController, QLPreviewingController {
 
 extension PreviewViewController: WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        // Allow the initial HTML load and in-page anchors; open web links in the browser.
-        if action.navigationType == .linkActivated {
-            if let url = action.request.url, ["http", "https", "mailto"].contains(url.scheme?.lowercased()) {
-                NSWorkspace.shared.open(url)
-            }
+        switch NotebookWebView.decision(for: action) {
+        case .allow: decisionHandler(.allow)
+        case .cancel: decisionHandler(.cancel)
+        case .openExternally(let url):
+            NSWorkspace.shared.open(url)
             decisionHandler(.cancel)
-            return
         }
-        let isInitialLoad = action.targetFrame?.isMainFrame == true && action.request.url?.absoluteString == "about:blank"
-        let isAnchor = action.request.url?.fragment != nil && action.request.url?.scheme == "about"
-        decisionHandler(isInitialLoad || isAnchor ? .allow : .cancel)
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {

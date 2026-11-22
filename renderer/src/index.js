@@ -3,7 +3,7 @@
 import hljs from "highlight.js/lib/common";
 import { renderMarkdown, resetMacros } from "./markdown.js";
 import { createOutputRenderer } from "./outputs.js";
-import { setAttachments } from "./images.js";
+import { setAttachments, setRemoteImages } from "./images.js";
 import { escapeHtml, joinSource } from "./util.js";
 
 function highlight(code, lang) {
@@ -46,6 +46,7 @@ export function renderNotebook(jsonText, optionsJSON) {
     nb.metadata?.language_info?.name || nb.metadata?.kernelspec?.language || "python";
   const outputs = createOutputRenderer({ allowScripts: !!options.allowScripts });
   resetMacros();
+  setRemoteImages(options.remoteImages);
 
   const html = nb.cells
     .map((cell) => {

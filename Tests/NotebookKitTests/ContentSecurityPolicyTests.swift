@@ -5,7 +5,7 @@ import WebKit
 
 /// Loads Fixtures/csp-probe.ipynb in a real WKWebView. Every probe in it inserts a
 /// "SCRIPT RAN: …" banner if it executes. Two independent layers must each stop them all:
-/// the page's CSP (for browsers, e.g. exported HTML) and `StaticWebView`'s JavaScript-off
+/// the page's CSP (for browsers, e.g. exported HTML) and `NotebookWebView`'s JavaScript-off
 /// configuration (for Quick Look, whose data-based previews ignore CSP).
 @MainActor
 @Suite(.serialized)
@@ -54,13 +54,19 @@ struct ContentSecurityPolicyTests {
     }
 
     @Test func staticWebViewBlocksEveryProbeEvenWithoutCSP() async throws {
-        let text = try await visibleText(of: pageWithoutCSP(), configuration: StaticWebView.makeConfiguration())
+        let text = try await visibleText(of: pageWithoutCSP(), configuration: NotebookWebView.makeConfiguration(.static(remoteImages: false)))
         #expect(text.contains("CSP probe"), "page loaded")
         #expect(!text.contains("SCRIPT RAN:"), "a probe executed:\n\(text)")
     }
 
-    @Test func networkRulesCompile() async throws {
-        _ = try await StaticWebView.blockNetworkRules()
+    @Test(arguments: [false, true])
+    func networkRulesCompile(remoteImages: Bool) async throws {
+        _ = try await NotebookWebView.contentRules(remoteImages: remoteImages)
+    }
+
+    @Test func remoteImagesModeStillBlocksScripts() async throws {
+        let text = try await visibleText(of: pageWithoutCSP(), configuration: NotebookWebView.makeConfiguration(.static(remoteImages: true)))
+        #expect(!text.contains("SCRIPT RAN:"), "a probe executed:\n\(text)")
     }
 
     /// Positive control: with neither layer the same probes do run, so the tests above are meaningful.

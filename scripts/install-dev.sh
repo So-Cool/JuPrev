@@ -19,8 +19,10 @@ pkill -x JuPrev 2>/dev/null || true
 mkdir -p "$HOME/Applications"
 rm -rf "$DEST"
 ditto "$BUILT" "$DEST"
+# Remove the build copy too, or it shows up a second time under Finder's Open With.
+rm -rf "$BUILT"
 "$LSREGISTER" -f "$DEST"
-open -g "$DEST"   # first launch registers the extension
+open -g "$DEST" --args --register-only   # first launch registers the extension, then quits
 sleep 2
 qlmanage -r >/dev/null 2>&1
 qlmanage -r cache >/dev/null 2>&1
