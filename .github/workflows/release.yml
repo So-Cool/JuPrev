@@ -1,0 +1,56 @@
+name: Release
+
+# Pushing a tag like v1.2.3 builds the app, publishes it as a GitHub release
+# and, if the TAP_GITHUB_TOKEN secret is set, updates the Homebrew cask in
+# So-Cool/homebrew-tap.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: macos-15
+    env:
+      TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Read the version from the tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      # Tests, then a universal ad-hoc signed build (there is no Developer ID),
+      # zipped into dist/. Sets ZIP and SHA256 for the steps below.
+      - name: Test, build and package
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: scripts/release.sh
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$ZIP" \
+            --title "JuPrev $VERSION" \
+            --generate-notes \
+            --notes "Install with \`brew install --cask So-Cool/tap/juprev\`. The app is not notarized: see \"Install\" in the README to open it from this download instead."
+
+      - name: Update the Homebrew cask
+        if: env.TAP_GITHUB_TOKEN != ''
+        run: |
+          git clone "https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/So-Cool/homebrew-tap.git" tap
+          cd tap
+          sed -i '' -E "s/^  version \".*\"/  version \"$VERSION\"/; s/^  sha256 \".*\"/  sha256 \"$SHA256\"/" Casks/juprev.rb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Update juprev to $VERSION"
+          git push

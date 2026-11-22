@@ -15,7 +15,15 @@ brew install --cask juprev
 
 JuPrev is ad-hoc signed, not notarized; the cask removes the quarantine flag so
 Gatekeeper lets it run, registers the Quick Look extensions and restarts the
-thumbnail service. Requires macOS 14 (Sonoma) or later. `spike/` holds the throwaway
+thumbnail service. Requires macOS 14 (Sonoma) or later.
+
+Installing from the zip on the [releases page](https://github.com/So-Cool/JuPrev/releases)
+instead: move `JuPrev.app` to Applications, then remove the quarantine flag and open it once:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/JuPrev.app
+open /Applications/JuPrev.app
+``` `spike/` holds the throwaway
 feasibility spike; see `spike/FINDINGS.md`.
 
 ## Layout
@@ -52,11 +60,19 @@ qlmanage -p path/to/notebook.ipynb
 
 ## Release
 
-1. Bump `MARKETING_VERSION` in `project.yml`.
-2. `scripts/release.sh` runs the tests, builds a universal ad-hoc signed app into
-   `dist/JuPrev-<version>.zip` and prints its sha256 plus the tag/release commands.
-3. Update `version` and `sha256` in `Casks/juprev.rb` in
-   [So-Cool/homebrew-tap](https://github.com/So-Cool/homebrew-tap).
+Push a tag such as `v0.2.0`. The **Release** workflow runs `scripts/release.sh` (tests,
+then a universal ad-hoc signed build zipped into `dist/`), publishes a GitHub release
+with the zip, and updates `version` and `sha256` in `Casks/juprev.rb` in
+[So-Cool/homebrew-tap](https://github.com/So-Cool/homebrew-tap). The cask update needs a
+`TAP_GITHUB_TOKEN` secret: a fine-grained token with *Contents: read and write* on
+the tap only.
+
+The tag sets the version shown in the app. Keep `MARKETING_VERSION` in `project.yml`
+in step: it is the version for local builds (`scripts/release.sh` without `VERSION`).
+
+The **Test** workflow runs on pushes to `main` and `dev` and on pull requests: it checks
+that the committed renderer bundle matches `renderer/`, runs `swift test` and builds the
+app with its extensions.
 
 ## Scripts and remote content
 
