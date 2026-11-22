@@ -1,0 +1,206 @@
+/* JuPrev default theme: quiet, reading-first, follows the system appearance. */
+
+:root {
+  --text: #1d1d1f;
+  --text-muted: #86868b;
+  --background: #ffffff;
+  --rule: #e5e5ea;
+  --code-background: #f5f5f7;
+  --code-text: #1d1d1f;
+  --stderr-background: #fff5f4;
+  --error-background: #fff0ef;
+  --link: #0066cc;
+  --placeholder-text: #6e6e73;
+  --table-stripe: #fafafa;
+  --ansi-black: #3e424d; --ansi-red: #c4372b; --ansi-green: #2d7d46; --ansi-yellow: #a46400;
+  --ansi-blue: #2163b8; --ansi-magenta: #9a3cad; --ansi-cyan: #1f7a87; --ansi-white: #8e8e93;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e8e8ed;
+    --text-muted: #8e8e93;
+    --background: #1e1e20;
+    --rule: #38383c;
+    --code-background: #2a2a2d;
+    --code-text: #e8e8ed;
+    --stderr-background: #3a2423;
+    --error-background: #3f2120;
+    --link: #4da3ff;
+    --placeholder-text: #a1a1a6;
+    --table-stripe: #242427;
+    --ansi-black: #8e8e93; --ansi-red: #ff6b5f; --ansi-green: #5fd07e; --ansi-yellow: #e5b84f;
+    --ansi-blue: #6aa8ff; --ansi-magenta: #d78af0; --ansi-cyan: #5ccad8; --ansi-white: #e8e8ed;
+  }
+}
+
+html { background: var(--background); }
+
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--background);
+  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.notebook {
+  max-width: 46em;
+  margin: 0 auto;
+  padding: 2.5em 2em 4em;
+}
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img, svg, video { max-width: 100%; height: auto; }
+
+/* Cells */
+
+.cell { margin: 0 0 1.25em; }
+
+.cell.markdown > :first-child { margin-top: 0; }
+.cell.markdown > :last-child { margin-bottom: 0; }
+
+h1, h2, h3, h4, h5, h6 { line-height: 1.25; margin: 1.6em 0 0.6em; font-weight: 600; }
+h1 { font-size: 2em; letter-spacing: -0.01em; }
+h2 { font-size: 1.5em; padding-bottom: 0.25em; border-bottom: 1px solid var(--rule); }
+h3 { font-size: 1.25em; }
+h4 { font-size: 1em; }
+
+p, ul, ol, blockquote, table, pre { margin: 0 0 1em; }
+
+blockquote {
+  margin-left: 0;
+  padding: 0 1em;
+  color: var(--text-muted);
+  border-left: 3px solid var(--rule);
+}
+
+hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
+
+code, pre, kbd, samp {
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  font-size: 0.82em;
+}
+
+:not(pre) > code {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--code-background);
+}
+
+pre {
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+table {
+  border-collapse: collapse;
+  font-size: 0.875em;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+th, td { padding: 0.35em 0.75em; border-bottom: 1px solid var(--rule); text-align: left; }
+th { font-weight: 600; }
+
+/* Code cells */
+
+.cell.code .input { position: relative; }
+
+.prompt {
+  position: absolute;
+  right: 100%;
+  top: 0.85em;
+  margin-right: 0.9em;
+  color: var(--text-muted);
+  font: 11px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
+  white-space: nowrap;
+  user-select: none;
+}
+
+@media (max-width: 62em) {
+  .prompt { display: none; }
+}
+
+pre.source {
+  margin: 0;
+  padding: 0.85em 1.1em;
+  border-radius: 8px;
+  background: var(--code-background);
+  color: var(--code-text);
+}
+
+pre.source code.hljs { padding: 0; background: transparent; font-size: inherit; }
+
+.cell.markdown pre {
+  padding: 0.85em 1.1em;
+  border-radius: 8px;
+  background: var(--code-background);
+}
+
+.cell.markdown pre code { padding: 0; background: transparent; font-size: inherit; }
+
+.outputs { margin-top: 0.6em; }
+.outputs > * { margin: 0 0 0.5em; }
+.outputs > :last-child { margin-bottom: 0; }
+
+.outputs pre { padding: 0 1.1em; margin: 0 0 0.5em; }
+/* Like JupyterLab: wrap text outputs so long log lines stay readable. */
+.output-stream, .output-error, .output-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.output-stream.stderr { background: var(--stderr-background); padding: 0.5em 1.1em; border-radius: 6px; }
+.output-error { background: var(--error-background); padding: 0.6em 1.1em; border-radius: 6px; }
+
+.output-html { overflow-x: auto; }
+.output-html table { display: table; }
+.output-html tbody tr:nth-child(odd) { background: var(--table-stripe); }
+.output-html td, .output-html th { text-align: right; white-space: nowrap; }
+
+.output-image { text-align: left; }
+.output-image img { display: block; }
+
+/* Dark mode: transparent plots usually assume a white page. */
+@media (prefers-color-scheme: dark) {
+  .output-image img { background: #ffffff; border-radius: 4px; }
+}
+
+.interactive-placeholder,
+.image-placeholder {
+  color: var(--placeholder-text);
+  font-size: 0.85em;
+  border: 1px dashed var(--rule);
+  border-radius: 6px;
+}
+
+.interactive-placeholder { padding: 0.75em 1em; }
+.image-placeholder { display: inline-block; padding: 0.2em 0.6em; }
+.image-placeholder-alt { font-style: italic; }
+
+.katex-error { color: var(--ansi-red); }
+
+.katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.2em 0; }
+
+/* ANSI */
+
+.ansi-black-fg { color: var(--ansi-black); }   .ansi-red-fg { color: var(--ansi-red); }
+.ansi-green-fg { color: var(--ansi-green); }   .ansi-yellow-fg { color: var(--ansi-yellow); }
+.ansi-blue-fg { color: var(--ansi-blue); }     .ansi-magenta-fg { color: var(--ansi-magenta); }
+.ansi-cyan-fg { color: var(--ansi-cyan); }     .ansi-white-fg { color: var(--ansi-white); }
+.ansi-black-bg { background: var(--ansi-black); }   .ansi-red-bg { background: var(--ansi-red); }
+.ansi-green-bg { background: var(--ansi-green); }   .ansi-yellow-bg { background: var(--ansi-yellow); }
+.ansi-blue-bg { background: var(--ansi-blue); }     .ansi-magenta-bg { background: var(--ansi-magenta); }
+.ansi-cyan-bg { background: var(--ansi-cyan); }     .ansi-white-bg { background: var(--ansi-white); }
+.ansi-bold { font-weight: 700; }
+.ansi-italic { font-style: italic; }
+.ansi-underline { text-decoration: underline; }
+
+@media print {
+  .notebook { max-width: none; padding: 0; }
+  .prompt { display: none; }
+  pre { white-space: pre-wrap; }
+}
