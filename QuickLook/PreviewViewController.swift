@@ -4,7 +4,7 @@ import os
 import QuickLookUI
 import WebKit
 
-private let logger = Logger(subsystem: "ch.usi.kacper.juprev.quicklook", category: "preview")
+private let logger = Logger(subsystem: "me.kcpr.juprev.quicklook", category: "preview")
 
 /// View-based Quick Look preview hosting its own WKWebView.
 ///

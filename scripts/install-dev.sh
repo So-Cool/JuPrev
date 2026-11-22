@@ -26,4 +26,7 @@ open -g "$DEST" --args --register-only   # first launch registers the extension,
 sleep 2
 qlmanage -r >/dev/null 2>&1
 qlmanage -r cache >/dev/null 2>&1
-pluginkit -m -i ch.usi.kacper.juprev.quicklook
+# The thumbnail service only notices *new* thumbnail extensions after a restart.
+pkill -f com.apple.quicklook.ThumbnailsAgent 2>/dev/null || true
+pluginkit -m -i me.kcpr.juprev.quicklook
+pluginkit -m -i me.kcpr.juprev.thumbnail

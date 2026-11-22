@@ -1,6 +1,6 @@
 name: JuPrev
 options:
-  bundleIdPrefix: ch.usi.kacper.juprev
+  bundleIdPrefix: me.kcpr.juprev
   deploymentTarget:
     macOS: "14.0"
   createIntermediateGroups: true
@@ -24,9 +24,10 @@ targets:
     platform: macOS
     sources: [App]
     settings:
-      PRODUCT_BUNDLE_IDENTIFIER: ch.usi.kacper.juprev
+      PRODUCT_BUNDLE_IDENTIFIER: me.kcpr.juprev
     dependencies:
       - target: JuPrevQuickLook
+      - target: JuPrevThumbnail
       - package: JuPrev
         product: NotebookKit
     entitlements:
@@ -68,7 +69,7 @@ targets:
     platform: macOS
     sources: [QuickLook]
     settings:
-      PRODUCT_BUNDLE_IDENTIFIER: ch.usi.kacper.juprev.quicklook
+      PRODUCT_BUNDLE_IDENTIFIER: me.kcpr.juprev.quicklook
     dependencies:
       - package: JuPrev
         product: NotebookKit
@@ -98,3 +99,28 @@ targets:
             QLIsDataBasedPreview: false
             QLSupportsSearchableItems: false
             QLSupportedContentTypes: [org.jupyter.ipynb]
+  JuPrevThumbnail:
+    type: app-extension
+    platform: macOS
+    sources: [Thumbnail]
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: me.kcpr.juprev.thumbnail
+    dependencies:
+      - package: JuPrev
+        product: NotebookKit
+      - sdk: QuickLookThumbnailing.framework
+    entitlements:
+      path: Thumbnail/JuPrevThumbnail.entitlements
+      properties:
+        # Quick Look grants access to the file being thumbnailed; nothing else is needed.
+        com.apple.security.app-sandbox: true
+    info:
+      path: Thumbnail/Info.plist
+      properties:
+        CFBundleDisplayName: JuPrev Thumbnails
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.quicklook.thumbnail
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ThumbnailProvider
+          NSExtensionAttributes:
+            QLSupportedContentTypes: [org.jupyter.ipynb]
+            QLThumbnailMinimumDimension: 0
