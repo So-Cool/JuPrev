@@ -37,12 +37,25 @@ targets:
         # Shared settings file read by the Quick Look extension (App Groups need a team ID).
         com.apple.security.temporary-exception.files.home-relative-path.read-write:
           - /Library/Application Support/JuPrev/
+        # Markdown images next to the notebook; LocalImageResolver enforces the folder policy.
+        com.apple.security.temporary-exception.files.absolute-path.read-only: ["/"]
+        # WKWebView needs it to run at all in the sandbox; static pages still block every
+        # load via content rules. Used for real only by "Allow Scripts" and remote images.
+        com.apple.security.network.client: true
     info:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: JuPrev
         LSApplicationCategoryType: public.app-category.developer-tools
         NSHumanReadableCopyright: ""
+        NSPrincipalClass: NSApplication
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Jupyter Notebook
+            CFBundleTypeRole: Viewer
+            # Listed under Open With; double-click keeps the user's current default app.
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [org.jupyter.ipynb]
+            NSDocumentClass: $(PRODUCT_MODULE_NAME).NotebookDocument
         UTImportedTypeDeclarations:
           - UTTypeIdentifier: org.jupyter.ipynb
             UTTypeDescription: Jupyter Notebook

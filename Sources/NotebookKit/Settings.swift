@@ -9,9 +9,12 @@ import Foundation
 public struct JuPrevSettings: Codable, Equatable, Sendable {
     /// Let markdown images use `..` to reach files above the notebook's folder.
     public var trustParentFolders = false
+    /// Load `https://` images in the app. Quick Look never loads anything from the network.
+    public var loadRemoteImages = false
 
-    public init(trustParentFolders: Bool = false) {
+    public init(trustParentFolders: Bool = false, loadRemoteImages: Bool = false) {
         self.trustParentFolders = trustParentFolders
+        self.loadRemoteImages = loadRemoteImages
     }
 
     public var localImagePolicy: LocalImagePolicy {
@@ -51,5 +54,6 @@ public struct JuPrevSettings: Codable, Equatable, Sendable {
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         trustParentFolders = try c.decodeIfPresent(Bool.self, forKey: .trustParentFolders) ?? false
+        loadRemoteImages = try c.decodeIfPresent(Bool.self, forKey: .loadRemoteImages) ?? false
     }
 }

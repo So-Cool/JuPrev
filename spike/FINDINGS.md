@@ -35,7 +35,7 @@ Tested in phase 2 with `Tests/NotebookKitTests/Fixtures/csp-probe.ipynb`. In a d
 is **ignored**: `<script>`, `onload` and `ontoggle` all ran in Quick Look, though the same
 page is protected in a regular WKWebView. The extension is therefore **view-based**: it hosts
 its own WKWebView with `allowsContentJavaScript = false` and a content rule list that blocks
-all URL loads (`NotebookKit/StaticWebView.swift`). Notes:
+all URL loads (now `NotebookKit/NotebookWebView.swift`). Notes:
 
 - A WKWebView in a sandboxed extension needs `com.apple.security.network.client`, or its
   WebContent and Networking processes crash. The rule list still blocks every load.

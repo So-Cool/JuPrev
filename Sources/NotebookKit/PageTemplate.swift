@@ -5,17 +5,22 @@ enum PageTemplate {
     /// Static pages may load nothing: no scripts, no network, no frames.
     /// Everything they need (images, fonts) is inlined as `data:` URIs.
     static let staticCSP = "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'"
+    static let staticRemoteImagesCSP = "default-src 'none'; img-src data: https:; font-src data:; style-src 'unsafe-inline'"
 
     /// With scripts allowed, outputs typically pull libraries (Plotly, Bokeh…) from CDNs.
     static let scriptsCSP = "default-src 'none'; img-src data: https:; font-src data: https:; style-src 'unsafe-inline' https:; script-src 'unsafe-inline' 'unsafe-eval' https:; connect-src https:"
 
-    static func document(title: String, body: String, allowScripts: Bool) -> String {
+    static func csp(for options: RenderOptions) -> String {
+        options.allowScripts ? scriptsCSP : options.remoteImages ? staticRemoteImagesCSP : staticCSP
+    }
+
+    static func document(title: String, body: String, options: RenderOptions) -> String {
         """
         <!doctype html>
         <html>
         <head>
         <meta charset="utf-8">
-        <meta http-equiv="Content-Security-Policy" content="\(allowScripts ? scriptsCSP : staticCSP)">
+        <meta http-equiv="Content-Security-Policy" content="\(csp(for: options))">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="color-scheme" content="light dark">
         <title>\(escape(title))</title>
@@ -39,7 +44,7 @@ enum PageTemplate {
             <p>\(escape(message))</p>
             </div>
             """,
-            allowScripts: false
+            options: RenderOptions()
         )
     }
 

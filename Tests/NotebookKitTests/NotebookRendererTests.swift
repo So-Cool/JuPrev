@@ -141,6 +141,29 @@ struct NotebookRendererTests {
         #expect(none.contains(#"alt="pasted""#), "attachments live inside the notebook, so they still load")
     }
 
+    @Test func remoteImagesAreOptIn() throws {
+        let off = try render("images/nb/images.ipynb")
+        #expect(off.bodyHTML.contains(#"data-reason="remote""#))
+        #expect(!off.html.contains("img-src data: https:"))
+
+        let on = try render("images/nb/images.ipynb", RenderOptions(remoteImages: true))
+        #expect(on.bodyHTML.contains(#"<img src="https://example.com/x.png" alt="remote">"#))
+        #expect(on.html.contains("img-src data: https:"))
+        #expect(!on.html.contains("script-src"))
+    }
+
+    @Test func imageSourcesAreEscaped() throws {
+        let nb = #"""
+        {"nbformat": 4, "nbformat_minor": 5, "metadata": {}, "cells": [
+          {"cell_type": "markdown", "metadata": {}, "source": "![a](attachment:x.png) ![b](https://e.com/a\"onerror=\"x.png)",
+           "attachments": {"x.png": {"image/png\" onerror=\"alert(1)": "AAAA"}}}
+        ]}
+        """#
+        let html = try Self.renderer.render(data: Data(nb.utf8), notebookFolder: nil, options: RenderOptions(remoteImages: true)).bodyHTML
+        #expect(!html.contains(#"" onerror=""#))
+        #expect(!html.contains(#""onerror=""#))
+    }
+
     @Test func noNotebookFolderMeansNoLocalImages() throws {
         let data = try Data(contentsOf: fixtures.appendingPathComponent("images/nb/images.ipynb"))
         let html = try Self.renderer.render(data: data, notebookFolder: nil).bodyHTML
@@ -181,6 +204,7 @@ struct SettingsTests {
 
         try JuPrevSettings(trustParentFolders: true).save(to: url)
         #expect(JuPrevSettings.load(from: url).trustParentFolders)
+        #expect(!JuPrevSettings.load(from: url).loadRemoteImages)
         #expect(JuPrevSettings.load(from: url).localImagePolicy == .trustParentFolders)
 
         try Data(#"{"trustParentFolders": true, "fromTheFuture": 1}"#.utf8).write(to: url)

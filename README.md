@@ -2,8 +2,9 @@
 
 A minimal native macOS viewer and Quick Look extension for Jupyter notebooks.
 
-Status: phase 2 of 5 — the shared renderer (`NotebookKit`), the `juprev` CLI and the
-Quick Look extension. The viewer app comes next (`App/` is a placeholder for now). `spike/` holds the throwaway
+Status: phase 3 of 5 — the shared renderer (`NotebookKit`), the `juprev` CLI, the
+Quick Look extension and a minimal viewer app. Thumbnails and Homebrew distribution
+come next, then Marked-style features (live reload, outline, themes, export). `spike/` holds the throwaway
 feasibility spike; see `spike/FINDINGS.md`.
 
 ## Layout
@@ -13,8 +14,8 @@ feasibility spike; see `spike/FINDINGS.md`.
 | `renderer/` | JS renderer (markdown-it, KaTeX, highlight.js) and the default stylesheet. `npm run build` writes `Sources/NotebookKit/Resources/{render.js,style.css}`, which are committed so Swift builds don't need Node. |
 | `Sources/NotebookKit/` | Runs the JS bundle in JavaScriptCore and produces a self-contained static HTML page (strict CSP, images and fonts inlined). Also owns the local-image folder policy and the shared settings file. |
 | `Sources/juprev/` | CLI: `juprev render notebook.ipynb -o out.html` |
-| `QuickLook/` | View-based Quick Look extension: JavaScript off, network blocked (`StaticWebView`). |
-| `App/` | Host app (placeholder until phase 3); declares the `org.jupyter.ipynb` type. |
+| `QuickLook/` | View-based Quick Look extension: JavaScript off, network blocked (`NotebookWebView`). |
+| `App/` | AppKit document-based viewer: one window per notebook, "Allow Scripts" bar for interactive outputs, Settings window. Registers as an *alternate* handler for `org.jupyter.ipynb`. |
 | `project.yml` | XcodeGen spec for the app and extension (`JuPrev.xcodeproj` is generated, not committed). |
 | `Tests/NotebookKitTests/` | Swift Testing suite, fixture notebooks (`Fixtures/make_fixtures.py`) and HTML snapshots. |
 
@@ -37,6 +38,14 @@ qlmanage -p path/to/notebook.ipynb
 /usr/bin/log stream --predicate 'subsystem == "ch.usi.kacper.juprev.quicklook"'
 ```
 
+## Scripts and remote content
+
+Notebooks are untrusted, so pages are static: JavaScript is off and every network load
+is blocked (`NotebookWebView`), with a strict CSP as a second layer for exported HTML.
+When a notebook has interactive outputs (widgets, Plotly, SHAP…), the app shows a bar
+offering **Allow Scripts** for that window only; it is never remembered. Quick Look
+never runs scripts or loads anything from the network.
+
 ## Local images
 
 Markdown images such as `![](img/plot.png)` load only from the notebook's folder
@@ -46,5 +55,7 @@ The **trust parent folders** setting also allows `../` paths. Settings live in
 Look extension share:
 
 ```json
-{ "trustParentFolders": true }
+{ "trustParentFolders": true, "loadRemoteImages": false }
 ```
+
+Both are also in JuPrev ▸ Settings. `loadRemoteImages` (https images) applies to the app only.

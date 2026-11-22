@@ -3,6 +3,12 @@
 import { escapeHtml } from "./util.js";
 
 let attachments = {};
+let remoteImages = false;
+
+/** Whether `https://` images are kept (the app's "Load remote images" setting). */
+export function setRemoteImages(enabled) {
+  remoteImages = !!enabled;
+}
 
 /** Set the current markdown cell's attachments (`attachment:name` references). */
 export function setAttachments(a) {
@@ -24,12 +30,13 @@ function resolve(src) {
   if (src.startsWith("data:image/")) return { src };
   if (src.startsWith("attachment:")) {
     const bundle = attachments[decodeURIComponent(src.slice("attachment:".length))];
-    const mime = bundle && Object.keys(bundle).find((m) => m.startsWith("image/"));
+    const mime = bundle && Object.keys(bundle).find((m) => /^image\/[\w.+-]+$/.test(m));
     if (!mime) return { blocked: "missing" };
     const data = Array.isArray(bundle[mime]) ? bundle[mime].join("") : bundle[mime];
     return { src: `data:${mime};base64,${data.replace(/\s/g, "")}` };
   }
-  if (/^https?:\/\//i.test(src) || src.startsWith("//")) return { blocked: "remote" };
+  if (/^https:\/\//i.test(src)) return remoteImages ? { src } : { blocked: "remote" };
+  if (/^http:\/\//i.test(src) || src.startsWith("//")) return { blocked: "remote" };
   const host = globalThis.__juprevResolveImage;
   if (typeof host !== "function") return { blocked: "disabled" };
   return JSON.parse(host(src));
@@ -42,9 +49,11 @@ function resolve(src) {
 export function renderImage(src, alt, title, originalTag) {
   const r = resolve(src);
   if (r.src) {
-    if (originalTag) return originalTag.replace(/(\bsrc\s*=\s*)(["']).*?\2/i, `$1"${r.src}"`);
+    // Escape every src: data: URIs from outputs/markdown and https URLs come from the notebook.
+    const src = escapeHtml(r.src);
+    if (originalTag) return originalTag.replace(/(\bsrc\s*=\s*)(["']).*?\2/i, () => `src="${src}"`);
     const t = title ? ` title="${escapeHtml(title)}"` : "";
-    return `<img src="${r.src}" alt="${escapeHtml(alt || "")}"${t}>`;
+    return `<img src="${src}" alt="${escapeHtml(alt || "")}"${t}>`;
   }
   const reason = BLOCKED_REASONS[r.blocked] || "Image not loaded";
   return (
