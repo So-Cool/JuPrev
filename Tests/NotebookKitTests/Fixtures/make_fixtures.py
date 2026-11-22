@@ -101,5 +101,19 @@ write("images/nb/images.ipynb", notebook([
     md("![pasted](attachment:pasted.png)", attachments={"pasted.png": {"image/png": BLUE_PNG}}),
 ]))
 
+# Everything here must stay inert in a static page; a red "SCRIPT RAN" banner means the CSP failed.
+BANNER = "document.body.insertAdjacentHTML('afterbegin', '<h1 style=\\'background:red;color:white\\'>SCRIPT RAN: {}</h1>')"
+write("csp-probe.ipynb", notebook([
+    md("# CSP probe\n\nIf any red **SCRIPT RAN** banner appears above, the Content Security Policy is not working.\n"),
+    md("<script>" + BANNER.format("markdown script") + "</script>\n"),
+    md('<svg width="40" height="40" onload="' + BANNER.format("svg onload").replace('"', "&quot;") + '"><rect width="40" height="40" fill="#ccc"/></svg>\n'),
+    md('<details open ontoggle="' + BANNER.format("ontoggle").replace('"', "&quot;") + '"><summary>details</summary>inline handler</details>\n'),
+    md('<iframe src="data:text/html,<script>parent.document.body.style.background=\'red\'</script>" width="300" height="40"></iframe>\n'),
+    md('<a href="javascript:alert(1)">javascript: link</a> (should do nothing)\n'),
+    md('<object data="https://example.com/"></object><link rel="stylesheet" href="https://example.com/x.css">\n'),
+    code("display(HTML(...))", [{"output_type": "display_data", "metadata": {},
+                                  "data": {"text/html": "<b>html output</b><style>body{outline:0}</style>"}}]),
+]))
+
 write("v3.ipynb", {"nbformat": 3, "nbformat_minor": 0, "metadata": {}, "worksheets": []})
 (HERE / "broken.ipynb").write_text('{"nbformat": 4, "cells": [')

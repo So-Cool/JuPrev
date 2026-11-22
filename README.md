@@ -2,8 +2,8 @@
 
 A minimal native macOS viewer and Quick Look extension for Jupyter notebooks.
 
-Status: phase 1 of 5 — the shared renderer (`NotebookKit`) and the `juprev` CLI.
-The Quick Look extension and the app come next. `spike/` holds the throwaway
+Status: phase 2 of 5 — the shared renderer (`NotebookKit`), the `juprev` CLI and the
+Quick Look extension. The viewer app comes next (`App/` is a placeholder for now). `spike/` holds the throwaway
 feasibility spike; see `spike/FINDINGS.md`.
 
 ## Layout
@@ -13,6 +13,9 @@ feasibility spike; see `spike/FINDINGS.md`.
 | `renderer/` | JS renderer (markdown-it, KaTeX, highlight.js) and the default stylesheet. `npm run build` writes `Sources/NotebookKit/Resources/{render.js,style.css}`, which are committed so Swift builds don't need Node. |
 | `Sources/NotebookKit/` | Runs the JS bundle in JavaScriptCore and produces a self-contained static HTML page (strict CSP, images and fonts inlined). Also owns the local-image folder policy and the shared settings file. |
 | `Sources/juprev/` | CLI: `juprev render notebook.ipynb -o out.html` |
+| `QuickLook/` | View-based Quick Look extension: JavaScript off, network blocked (`StaticWebView`). |
+| `App/` | Host app (placeholder until phase 3); declares the `org.jupyter.ipynb` type. |
+| `project.yml` | XcodeGen spec for the app and extension (`JuPrev.xcodeproj` is generated, not committed). |
 | `Tests/NotebookKitTests/` | Swift Testing suite, fixture notebooks (`Fixtures/make_fixtures.py`) and HTML snapshots. |
 
 ## Develop
@@ -27,6 +30,11 @@ swift run juprev render path/to/notebook.ipynb -o /tmp/out.html --time
 
 # after an intended rendering change
 JUPREV_RECORD_SNAPSHOTS=1 swift test
+
+# build, install to ~/Applications and register the Quick Look extension (needs xcodegen)
+scripts/install-dev.sh
+qlmanage -p path/to/notebook.ipynb
+/usr/bin/log stream --predicate 'subsystem == "ch.usi.kacper.juprev.quicklook"'
 ```
 
 ## Local images
