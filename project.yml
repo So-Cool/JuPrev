@@ -6,14 +6,14 @@ options:
   createIntermediateGroups: true
 settings:
   base:
-    # Ad-hoc signing: distributed via a Homebrew tap, not the App Store (see spike/FINDINGS.md).
+    # Ad-hoc signing: distributed via a Homebrew tap, not the App Store (see docs/design-notes.md).
     CODE_SIGN_IDENTITY: "-"
     CODE_SIGN_STYLE: Manual
     DEVELOPMENT_TEAM: ""
     # Only needed for notarization, and it would deny JavaScriptCore its JIT.
     ENABLE_HARDENED_RUNTIME: NO
     SWIFT_VERSION: "5.10"
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "0.1"
     CURRENT_PROJECT_VERSION: "1"
 packages:
   JuPrev:
@@ -52,7 +52,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.developer-tools
-        NSHumanReadableCopyright: ""
+        NSHumanReadableCopyright: "© 2026 Kacper Sokol. MIT License."
         NSPrincipalClass: NSApplication
         CFBundleDocumentTypes:
           - CFBundleTypeName: Jupyter Notebook

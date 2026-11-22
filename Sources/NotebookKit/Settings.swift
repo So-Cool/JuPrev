@@ -3,7 +3,7 @@ import Foundation
 /// Preferences shared by the app and the Quick Look extension.
 ///
 /// They live in a plain JSON file rather than an App Group: with ad-hoc signing, App Group
-/// access makes macOS 15 ask "would like to access data from other apps" (see spike/FINDINGS.md).
+/// access makes macOS 15 ask "would like to access data from other apps" (see docs/design-notes.md).
 /// The app writes the file through a read-write sandbox exception for its folder; the
 /// extension reads it through its read-only exception.
 public struct JuPrevSettings: Codable, Equatable, Sendable {
