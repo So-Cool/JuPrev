@@ -116,7 +116,7 @@ the rules above decide which ones.
 
 | Path                      | What |
 | ------------------------- | ---- |
-| `renderer/`               | JS renderer (markdown-it, KaTeX, highlight.js) and the default stylesheet. `npm run build` writes `Sources/NotebookKit/Resources/{render.js,style.css}`, `THIRD_PARTY_NOTICES.md` and `App/Credits.html`, all committed so Swift builds don't need Node. |
+| `renderer/`               | JS renderer (markdown-it, KaTeX, highlight.js) and the default stylesheet. `npm run build` writes `Sources/NotebookKit/Resources/{render.js,style.css}`, `ACKNOWLEDGEMENTS.md` and `App/Credits.html`, all committed so Swift builds don't need Node. |
 | `Sources/NotebookKit/`    | Runs the JS bundle in JavaScriptCore and produces a self-contained static HTML page. Also owns the local-image policy, the shared settings file, the web view configuration and the thumbnail summary. |
 | `Sources/juprev/`         | CLI: `juprev render notebook.ipynb -o out.html` |
 | `QuickLook/`              | View-based Quick Look preview extension. |
@@ -124,7 +124,6 @@ the rules above decide which ones.
 | `App/`                    | AppKit document-based viewer. Registers as an *alternate* handler for `org.jupyter.ipynb`. |
 | `project.yml`             | XcodeGen spec for the app and extensions (`JuPrev.xcodeproj` is generated, not committed). |
 | `Tests/NotebookKitTests/` | Swift Testing suite, fixture notebooks (`Fixtures/make_fixtures.py`) and HTML snapshots. |
-| `docs/design-notes.md`    | Why things are built the way they are (Quick Look, sandbox and signing findings). |
 
 ```sh
 swift build
@@ -171,12 +170,18 @@ The **Test** workflow runs on pushes to `master` and `dev` and on pull requests:
 it checks that the committed renderer bundle and notices match `renderer/`,
 runs `swift test` and builds the app with its extensions.
 
+## Design notes
+
+Why JuPrev is built the way it is, including the Quick Look, sandbox and signing
+findings behind the current design, is recorded in
+[docs/design-notes.md](docs/design-notes.md).
+
 ## License
 
 MIT, see [LICENSE](LICENSE).
 The bundled renderer includes third-party packages under the MIT, BSD-2-Clause
 and BSD-3-Clause licences:
-see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md),
+see [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md),
 also shown in JuPrev ▸ About JuPrev.
 
 [release]: https://github.com/So-Cool/JuPrev/releases

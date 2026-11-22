@@ -26,7 +26,7 @@ jobs:
         run: |
           npm ci
           npm run build
-          git diff --exit-code --stat -- ../Sources/NotebookKit/Resources ../THIRD_PARTY_NOTICES.md ../App/Credits.html
+          git diff --exit-code --stat -- ../Sources/NotebookKit/Resources ../ACKNOWLEDGEMENTS.md ../App/Credits.html
 
       - name: Test NotebookKit
         run: swift test
