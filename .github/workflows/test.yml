@@ -1,0 +1,41 @@
+name: Test
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test and build
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+
+      # render.js and style.css are committed build products of renderer/;
+      # fail if they weren't rebuilt after a change to its sources.
+      - name: Check the renderer bundle is up to date
+        working-directory: renderer
+        run: |
+          npm ci
+          npm run build
+          git diff --exit-code --stat -- ../Sources/NotebookKit/Resources
+
+      - name: Test NotebookKit
+        run: swift test
+
+      - name: Build the app and extensions
+        run: |
+          brew install xcodegen
+          xcodegen generate --quiet
+          xcodebuild build \
+            -project JuPrev.xcodeproj -scheme JuPrev -configuration Debug \
+            -destination "generic/platform=macOS" -derivedDataPath build \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=

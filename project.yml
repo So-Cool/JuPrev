@@ -48,6 +48,9 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: JuPrev
+        # From the build settings, so release builds get the tag's version.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.developer-tools
         NSHumanReadableCopyright: ""
         NSPrincipalClass: NSApplication
@@ -91,6 +94,9 @@ targets:
       path: QuickLook/Info.plist
       properties:
         CFBundleDisplayName: JuPrev Quick Look
+        # From the build settings, so release builds get the tag's version.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.quicklook.preview
           # View-based: we own the WKWebView so JavaScript can be switched off (data-based
@@ -119,6 +125,9 @@ targets:
       path: Thumbnail/Info.plist
       properties:
         CFBundleDisplayName: JuPrev Thumbnails
+        # From the build settings, so release builds get the tag's version.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.quicklook.thumbnail
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ThumbnailProvider
