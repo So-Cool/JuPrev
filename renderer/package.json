@@ -1,0 +1,19 @@
+{
+  "name": "juprev-renderer",
+  "version": "0.1.0",
+  "description": "Notebook-to-HTML renderer bundled into NotebookKit (runs in JavaScriptCore).",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "highlight.js": "11.10.0",
+    "katex": "0.16.11",
+    "markdown-it": "14.1.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0"
+  }
+}
