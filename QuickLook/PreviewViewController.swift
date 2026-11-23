@@ -46,6 +46,11 @@ final class PreviewViewController: NSViewController, QLPreviewingController {
         let rendered = await Task.detached(priority: .userInitiated) { Self.render(url) }.value
         let renderedAt = Date()
 
+        // Quick Look may reuse this controller for the next file (arrowing through files in
+        // the preview panel): replace the previous page rather than stacking web views.
+        self.webView?.removeFromSuperview()
+        self.webView = nil
+
         // Fails closed: without the network-blocking rules there is no preview.
         let webView = WKWebView(frame: view.bounds, configuration: try await NotebookWebView.makeConfiguration(.static(remoteImages: false)))
         webView.autoresizingMask = [.width, .height]

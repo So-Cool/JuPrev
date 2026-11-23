@@ -58,7 +58,7 @@ final class NotebookWindowController: NSWindowController, NSMenuItemValidation {
         return true
     }
 
-    // MARK: View menu (sent up the responder chain from the window)
+    // MARK: Menu actions (File, Edit ▸ Find, View), sent up the responder chain from the window
 
     @objc func reloadNotebook(_ sender: Any?) { notebookViewController.reload(preservingScroll: true) }
 

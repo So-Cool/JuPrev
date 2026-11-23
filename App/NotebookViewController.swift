@@ -6,7 +6,7 @@ import WebKit
 
 private let logger = Logger(subsystem: "me.kcpr.juprev", category: "viewer")
 
-/// Shows one rendered notebook, with the interactive-outputs bar above it.
+/// Shows one rendered notebook, with the interactive-outputs bar and the find bar above it.
 final class NotebookViewController: NSViewController {
     private weak var document: NotebookDocument?
     private let outline: OutlineModel
@@ -22,8 +22,8 @@ final class NotebookViewController: NSViewController {
 
     /// Per window and never remembered, like Jupyter's per-session trust.
     private var scriptsAllowed = false
-    /// Set once the user toggles View ▸ Show Code / Show Outputs in this window;
-    /// until then the window follows the global setting.
+    /// Set once the user toggles View ▸ Show Code / Show Outputs / Show stderr in this
+    /// window; until then the window follows the global setting.
     private var showCodeOverride: Bool?
     private var showOutputsOverride: Bool?
     private var showStderrOverride: Bool?
@@ -34,6 +34,7 @@ final class NotebookViewController: NSViewController {
     private var pageZoom: CGFloat = 1
     private var renderTask: Task<Void, Never>?
     private var pendingScrollY: Double?
+    private var observers: [NSObjectProtocol] = []
 
     init(document: NotebookDocument, outline: OutlineModel) {
         self.document = document
@@ -49,6 +50,13 @@ final class NotebookViewController: NSViewController {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    deinit {
+        // Block-based observers stay registered until removed, even after we're gone.
+        observers.forEach(NotificationCenter.default.removeObserver)
+        sectionTimer?.invalidate()
+        renderTask?.cancel()
+    }
 
     override func loadView() {
         let stack = NSStackView()
@@ -83,12 +91,15 @@ final class NotebookViewController: NSViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        NotificationCenter.default.addObserver(forName: .juprevSettingsDidChange, object: nil, queue: .main) { [weak self] _ in
-            self?.reload(preservingScroll: true)
-        }
-        NotificationCenter.default.addObserver(forName: NotebookDocument.contentsDidChange, object: document, queue: .main) { [weak self] _ in
-            self?.reload(preservingScroll: true)
-        }
+        let center = NotificationCenter.default
+        observers = [
+            center.addObserver(forName: .juprevSettingsDidChange, object: nil, queue: .main) { [weak self] _ in
+                self?.reload(preservingScroll: true)
+            },
+            center.addObserver(forName: NotebookDocument.contentsDidChange, object: document, queue: .main) { [weak self] _ in
+                self?.reload(preservingScroll: true)
+            },
+        ]
         reload(preservingScroll: false)
     }
 
@@ -315,7 +326,7 @@ final class NotebookViewController: NSViewController {
         operation.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
     }
 
-    // MARK: Show code / outputs
+    // MARK: Show code / outputs / stderr
 
     func toggleCode() {
         showCodeOverride = !showCode
