@@ -25,8 +25,15 @@ final class NotebookWindowController: NSWindowController, NSMenuItemValidation {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
-        if item.action == #selector(findInNotebook(_:)) {
+        switch item.action {
+        case #selector(findInNotebook(_:)):
             return notebookViewController.canFind
+        case #selector(toggleCode(_:)):
+            item.state = notebookViewController.showCode ? .on : .off
+        case #selector(toggleOutputs(_:)):
+            item.state = notebookViewController.showOutputs ? .on : .off
+        default:
+            break
         }
         return true
     }
@@ -38,6 +45,8 @@ final class NotebookWindowController: NSWindowController, NSMenuItemValidation {
     // Edit ▸ Find (tags are NSTextFinder.Action values). A selector of our own: with the
     // standard performTextFinderAction(_:), WKWebView (first responder) takes the action.
     @objc func findInNotebook(_ sender: Any?) { notebookViewController.runFindAction(sender) }
+    @objc func toggleCode(_ sender: Any?) { notebookViewController.toggleCode() }
+    @objc func toggleOutputs(_ sender: Any?) { notebookViewController.toggleOutputs() }
     @objc func actualSize(_ sender: Any?) { notebookViewController.zoom(to: 1) }
     @objc func zoomIn(_ sender: Any?) { notebookViewController.zoom(by: 1.1) }
     @objc func zoomOut(_ sender: Any?) { notebookViewController.zoom(by: 1 / 1.1) }

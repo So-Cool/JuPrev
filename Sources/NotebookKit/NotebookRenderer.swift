@@ -8,19 +8,33 @@ public struct RenderOptions: Equatable, Sendable {
     /// Render `text/html` outputs that contain scripts as-is and relax the page's CSP.
     /// Off by default: notebooks are untrusted.
     public var allowScripts: Bool
+    /// Hide code cells' source / outputs (CSS classes on <html>, so they can be toggled live).
+    public var showCode: Bool
+    public var showOutputs: Bool
 
-    public init(localImages: LocalImagePolicy = .notebookFolder, remoteImages: Bool = false, allowScripts: Bool = false) {
+    public init(
+        localImages: LocalImagePolicy = .notebookFolder,
+        remoteImages: Bool = false,
+        allowScripts: Bool = false,
+        showCode: Bool = true,
+        showOutputs: Bool = true
+    ) {
         self.localImages = localImages
         self.remoteImages = remoteImages
         self.allowScripts = allowScripts
+        self.showCode = showCode
+        self.showOutputs = showOutputs
     }
 
-    /// Options for the app. Quick Look ignores `loadRemoteImages` and never loads remote content.
-    public init(settings: JuPrevSettings, remoteImages: Bool? = nil, allowScripts: Bool = false) {
+    /// Options from the shared settings; the app overrides what a window has toggled.
+    /// Quick Look passes `remoteImages: false`: it never loads remote content.
+    public init(settings: JuPrevSettings, remoteImages: Bool? = nil, allowScripts: Bool = false, showCode: Bool? = nil, showOutputs: Bool? = nil) {
         self.init(
             localImages: settings.localImagePolicy,
             remoteImages: remoteImages ?? settings.loadRemoteImages,
-            allowScripts: allowScripts
+            allowScripts: allowScripts,
+            showCode: showCode ?? settings.showCode,
+            showOutputs: showOutputs ?? settings.showOutputs
         )
     }
 }

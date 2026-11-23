@@ -16,6 +16,13 @@ final class NotebookViewController: NSViewController {
 
     /// Per window and never remembered, like Jupyter's per-session trust.
     private var scriptsAllowed = false
+    /// Set once the user toggles View ▸ Show Code / Show Outputs in this window;
+    /// until then the window follows the global setting.
+    private var showCodeOverride: Bool?
+    private var showOutputsOverride: Bool?
+
+    var showCode: Bool { showCodeOverride ?? JuPrevSettings.load().showCode }
+    var showOutputs: Bool { showOutputsOverride ?? JuPrevSettings.load().showOutputs }
     private var pageZoom: CGFloat = 1
     private var renderTask: Task<Void, Never>?
     private var pendingScrollY: Double?
@@ -71,7 +78,12 @@ final class NotebookViewController: NSViewController {
     private func render(preservingScroll: Bool) async {
         guard let document else { return }
         let scrollY = preservingScroll ? await currentScrollY() : nil
-        let options = RenderOptions(settings: JuPrevSettings.load(), allowScripts: scriptsAllowed)
+        let options = RenderOptions(
+            settings: JuPrevSettings.load(),
+            allowScripts: scriptsAllowed,
+            showCode: showCodeOverride,
+            showOutputs: showOutputsOverride
+        )
 
         let html: String
         let interactiveOutputs: Int
@@ -147,6 +159,23 @@ final class NotebookViewController: NSViewController {
     }
 
     var canFind: Bool { webView != nil }
+
+    // MARK: Show code / outputs
+
+    func toggleCode() {
+        showCodeOverride = !showCode
+        setPageClass("hide-code", !showCode)
+    }
+
+    func toggleOutputs() {
+        showOutputsOverride = !showOutputs
+        setPageClass("hide-outputs", !showOutputs)
+    }
+
+    /// Instant: flips a class on the page instead of re-rendering.
+    private func setPageClass(_ name: String, _ on: Bool) {
+        webView?.evaluateJavaScript("document.documentElement.classList.toggle('\(name)', \(on))")
+    }
 
     // MARK: Zoom
 

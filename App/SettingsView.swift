@@ -16,6 +16,13 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section("Notebook") {
+                Toggle("Show code", isOn: $settings.showCode)
+                Toggle(isOn: $settings.showOutputs) {
+                    Text("Show outputs")
+                    Text("Defaults for Quick Look and for windows. View ▸ Show Code and Show Outputs change just the current window.")
+                }
+            }
             Section("Images") {
                 Toggle(isOn: $settings.trustParentFolders) {
                     Text("Load images from parent folders")

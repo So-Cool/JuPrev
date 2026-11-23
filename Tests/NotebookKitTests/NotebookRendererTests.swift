@@ -121,6 +121,13 @@ struct NotebookRendererTests {
         #expect(html.contains("@font-face"), "KaTeX fonts are inlined")
     }
 
+    @Test func hiddenPartsAreClassesOnTheRoot() throws {
+        #expect(try render("outputs.ipynb").html.contains(#"<html class="">"#))
+        let hidden = try render("outputs.ipynb", RenderOptions(showCode: false, showOutputs: false)).html
+        #expect(hidden.contains(#"<html class="hide-code hide-outputs">"#))
+        #expect(NotebookRenderer.stylesheet.contains("html.hide-code .cell.code .input"))
+    }
+
     // MARK: Images
 
     @Test func imagePolicyIsApplied() throws {
@@ -205,7 +212,12 @@ struct SettingsTests {
         try JuPrevSettings(trustParentFolders: true).save(to: url)
         #expect(JuPrevSettings.load(from: url).trustParentFolders)
         #expect(!JuPrevSettings.load(from: url).loadRemoteImages)
+        #expect(JuPrevSettings.load(from: url).showCode, "missing keys keep their defaults")
         #expect(JuPrevSettings.load(from: url).localImagePolicy == .trustParentFolders)
+
+        try JuPrevSettings(showCode: false).save(to: url)
+        #expect(RenderOptions(settings: .load(from: url)).showCode == false)
+        #expect(RenderOptions(settings: .load(from: url), showCode: true).showCode, "a window's choice wins")
 
         try Data(#"{"trustParentFolders": true, "fromTheFuture": 1}"#.utf8).write(to: url)
         #expect(JuPrevSettings.load(from: url).trustParentFolders, "unknown keys are ignored")

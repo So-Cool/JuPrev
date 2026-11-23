@@ -11,10 +11,15 @@ public struct JuPrevSettings: Codable, Equatable, Sendable {
     public var trustParentFolders = false
     /// Load `https://` images in the app. Quick Look never loads anything from the network.
     public var loadRemoteImages = false
+    /// Defaults for Quick Look and new windows; each window can toggle its own.
+    public var showCode = true
+    public var showOutputs = true
 
-    public init(trustParentFolders: Bool = false, loadRemoteImages: Bool = false) {
+    public init(trustParentFolders: Bool = false, loadRemoteImages: Bool = false, showCode: Bool = true, showOutputs: Bool = true) {
         self.trustParentFolders = trustParentFolders
         self.loadRemoteImages = loadRemoteImages
+        self.showCode = showCode
+        self.showOutputs = showOutputs
     }
 
     public var localImagePolicy: LocalImagePolicy {
@@ -55,5 +60,7 @@ public struct JuPrevSettings: Codable, Equatable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         trustParentFolders = try c.decodeIfPresent(Bool.self, forKey: .trustParentFolders) ?? false
         loadRemoteImages = try c.decodeIfPresent(Bool.self, forKey: .loadRemoteImages) ?? false
+        showCode = try c.decodeIfPresent(Bool.self, forKey: .showCode) ?? true
+        showOutputs = try c.decodeIfPresent(Bool.self, forKey: .showOutputs) ?? true
     }
 }

@@ -14,10 +14,15 @@ enum PageTemplate {
         options.allowScripts ? scriptsCSP : options.remoteImages ? staticRemoteImagesCSP : staticCSP
     }
 
+    /// Classes on <html> that hide parts of the notebook (see notebook.css).
+    static func htmlClasses(showCode: Bool, showOutputs: Bool) -> String {
+        [showCode ? nil : "hide-code", showOutputs ? nil : "hide-outputs"].compactMap { $0 }.joined(separator: " ")
+    }
+
     static func document(title: String, body: String, options: RenderOptions) -> String {
         """
         <!doctype html>
-        <html>
+        <html class="\(htmlClasses(showCode: options.showCode, showOutputs: options.showOutputs))">
         <head>
         <meta charset="utf-8">
         <meta http-equiv="Content-Security-Policy" content="\(csp(for: options))">

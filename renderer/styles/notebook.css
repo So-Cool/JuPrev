@@ -199,6 +199,13 @@ pre.source code.hljs { padding: 0; background: transparent; font-size: inherit; 
 .ansi-italic { font-style: italic; }
 .ansi-underline { text-decoration: underline; }
 
+/* View ▸ Show Code / Show Outputs (classes on <html>). */
+html.hide-code .cell.code .input { display: none; }
+html.hide-code .cell.code .outputs { margin-top: 0; }
+html.hide-code .cell.code:not(:has(.outputs)) { display: none; }
+html.hide-outputs .cell.code .outputs { display: none; }
+html.hide-code.hide-outputs .cell.code { display: none; }
+
 /* While the app's find bar is open (it sets this class), make the found text stand out:
    focus is in the search field, so WebKit would otherwise draw it as a pale inactive selection. */
 html.finding ::selection { background: #ffd60a; color: #000; }
