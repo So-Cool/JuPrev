@@ -39,6 +39,13 @@ public struct RenderOptions: Equatable, Sendable {
     }
 }
 
+/// A markdown heading, for the outline sidebar. `id` is the element id in the page.
+public struct NotebookHeading: Codable, Equatable, Hashable, Sendable {
+    public let level: Int
+    public let text: String
+    public let id: String
+}
+
 public struct RenderedNotebook: Sendable {
     /// A complete, self-contained HTML document.
     public let html: String
@@ -51,6 +58,8 @@ public struct RenderedNotebook: Sendable {
     /// Outputs that need JavaScript (widgets, Plotly, Bokeh…). With scripts disabled
     /// these show a static fallback or a placeholder.
     public let interactiveOutputs: Int
+    /// Headings of markdown cells, in order (not headings inside outputs).
+    public let headings: [NotebookHeading]
 }
 
 public enum NotebookRenderError: Error, Equatable, LocalizedError {
@@ -144,7 +153,8 @@ public final class NotebookRenderer {
             title: title,
             language: payload.language,
             cellCount: payload.cellCount,
-            interactiveOutputs: payload.interactiveOutputs
+            interactiveOutputs: payload.interactiveOutputs,
+            headings: payload.headings
         )
     }
 
@@ -154,6 +164,7 @@ public final class NotebookRenderer {
         let language: String
         let cellCount: Int
         let interactiveOutputs: Int
+        let headings: [NotebookHeading]
     }
 
     private static func error(from exception: JSValue) -> NotebookRenderError {

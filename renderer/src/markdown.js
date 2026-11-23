@@ -6,6 +6,10 @@ import katex from "katex";
 import { escapeHtml } from "./util.js";
 import { renderImage } from "./images.js";
 
+// Private-use characters: markdown-it rewrites NUL, so it can't be used as a placeholder.
+const OPEN = "\uE000";
+const CLOSE = "\uE001";
+
 const md = new MarkdownIt({
   html: true,
   linkify: true,
@@ -15,6 +19,38 @@ const md = new MarkdownIt({
     } catch (e) {}
     return ""; // markdown-it escapes the code itself
   },
+});
+
+// Heading ids follow Jupyter (text with spaces as dashes) so in-notebook links like
+// [see](#Training-the-Model) work; the outline sidebar uses them too.
+let headings = [];
+let usedIds = new Map();
+let mathSource = [];
+export function resetHeadings() {
+  headings = [];
+  usedIds = new Map();
+}
+export const collectedHeadings = () => headings;
+
+md.core.ruler.push("juprev_heading_ids", (state) => {
+  const tokens = state.tokens;
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i].type !== "heading_open") continue;
+    const inline = tokens[i + 1];
+    const text = (inline.children || [])
+      .filter((t) => t.type === "text" || t.type === "code_inline")
+      .map((t) => t.content)
+      .join("")
+      .replace(new RegExp(`${OPEN}M(\\d+)${CLOSE}`, "g"), (_, n) => mathSource[+n])
+      .trim();
+    if (!text) continue;
+    const base = text.replace(/\s+/g, "-");
+    const count = usedIds.get(base) || 0;
+    usedIds.set(base, count + 1);
+    const id = count === 0 ? base : `${base}-${count}`;
+    tokens[i].attrSet("id", id);
+    if (state.env.collectHeadings) headings.push({ level: Number(tokens[i].tag.slice(1)), text, id });
+  }
 });
 
 md.renderer.rules.image = (tokens, idx) => {
@@ -89,17 +125,16 @@ export function renderTex(tex, displayMode) {
   }
 }
 
-// Private-use characters: markdown-it rewrites NUL, so it can't be used as a placeholder.
-const OPEN = "";
-const CLOSE = "";
 
 const CODE_RE = /(^|\n)(```|~~~)[\s\S]*?\n\2|`+[^`\n]*`+/g;
 const MATH_RE =
   /(\$\$[\s\S]+?\$\$)|(\\\[[\s\S]+?\\\])|(\\begin\{([a-zA-Z*]+)\}[\s\S]+?\\end\{\4\})|(\\\([\s\S]+?\\\))|((?<![\\$])\$(?![\s$])(?:\\.|[^$\n\\])+?(?<!\s)\$)/g;
 
-export function renderMarkdown(text) {
+/** `collectHeadings`: add this text's headings to the outline (markdown cells, not outputs). */
+export function renderMarkdown(text, { collectHeadings = false } = {}) {
   const code = [];
   const math = [];
+  mathSource = [];
   text = text.replace(CODE_RE, (m) => {
     code.push(m);
     return `${OPEN}C${code.length - 1}${CLOSE}`;
@@ -112,10 +147,12 @@ export function renderMarkdown(text) {
       paren ? renderTex(paren.slice(2, -2), false) :
       renderTex(single.slice(1, -1), false);
     math.push(html);
+    // Shown in the outline as plain TeX, without the $…$ / \(…\) delimiters.
+    mathSource.push(m.replace(/^\$+|\$+$/g, "").replace(/^\\[([]|\\[)\]]$/g, ""));
     return `${OPEN}M${math.length - 1}${CLOSE}`;
   });
   text = text.replace(new RegExp(`${OPEN}C(\\d+)${CLOSE}`, "g"), (_, i) => code[+i]);
   return md
-    .render(text)
+    .render(text, { collectHeadings })
     .replace(new RegExp(`${OPEN}M(\\d+)${CLOSE}`, "g"), (_, i) => math[+i]);
 }

@@ -8,6 +8,11 @@ private let logger = Logger(subsystem: "me.kcpr.juprev", category: "viewer")
 /// Shows one rendered notebook, with the interactive-outputs bar above it.
 final class NotebookViewController: NSViewController {
     private weak var document: NotebookDocument?
+    private let outline: OutlineModel
+    private var sectionTimer: Timer?
+    /// A heading the user picked, kept highlighted until they scroll away from where
+    /// the jump landed (near the end, a jump can't bring the heading to the top).
+    private var pickedHeading: (id: String, scrollY: Double?)?
     private let bar = InteractiveOutputsBar()
     private let findBar = FindBar()
     private let webContainer = NSView()
@@ -27,9 +32,16 @@ final class NotebookViewController: NSViewController {
     private var renderTask: Task<Void, Never>?
     private var pendingScrollY: Double?
 
-    init(document: NotebookDocument) {
+    init(document: NotebookDocument, outline: OutlineModel) {
         self.document = document
+        self.outline = outline
         super.init(nibName: nil, bundle: nil)
+        outline.onSelect = { [weak self] id in self?.scrollToHeading(id) }
+    }
+
+    /// Track the current section only while the outline is on screen.
+    var outlineVisible = false {
+        didSet { updateSectionTracking() }
     }
 
     @available(*, unavailable)
@@ -53,6 +65,17 @@ final class NotebookViewController: NSViewController {
         }
         view = stack
         view.frame = NSRect(x: 0, y: 0, width: 900, height: 1000)
+    }
+
+    override func viewDidDisappear() {
+        super.viewDidDisappear()
+        sectionTimer?.invalidate()
+        sectionTimer = nil
+    }
+
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        updateSectionTracking()
     }
 
     override func viewDidLoad() {
@@ -87,13 +110,16 @@ final class NotebookViewController: NSViewController {
 
         let html: String
         let interactiveOutputs: Int
+        let headings: [NotebookHeading]
         switch await RenderService.shared.render(document.contents, fileURL: document.fileURL, options: options) {
         case .success(let rendered):
             html = rendered.html
             interactiveOutputs = rendered.interactiveOutputs
+            headings = rendered.headings
         case .failure(let error):
             html = NotebookRenderer.errorPage(title: document.displayName, message: error.localizedDescription)
             interactiveOutputs = 0
+            headings = []
         }
         guard !Task.isCancelled else { return }
 
@@ -103,6 +129,7 @@ final class NotebookViewController: NSViewController {
 
         logger.notice("rendered \(document.displayName, privacy: .public): \(html.utf8.count / 1024) KB")
         bar.update(interactiveOutputs: interactiveOutputs, scriptsAllowed: scriptsAllowed)
+        if outline.headings != headings { outline.headings = headings }
         pendingScrollY = scrollY
         webView.loadHTMLString(html, baseURL: nil)
     }
@@ -159,6 +186,59 @@ final class NotebookViewController: NSViewController {
     }
 
     var canFind: Bool { webView != nil }
+
+    // MARK: Outline
+
+    private func scrollToHeading(_ id: String) {
+        pickedHeading = (id, nil)
+        webView?.callAsyncJavaScript(
+            "document.getElementById(id)?.scrollIntoView({ block: 'start' })",
+            arguments: ["id": id], in: nil, in: .page
+        )
+    }
+
+    private func updateSectionTracking() {
+        sectionTimer?.invalidate()
+        sectionTimer = nil
+        guard outlineVisible else { return }
+        sectionTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+            self?.updateCurrentSection()
+        }
+    }
+
+    /// The last outline heading scrolled past a line near the top of the window.
+    /// (Polled: the page's own scripts are off, so it can't report scrolling itself.)
+    private func updateCurrentSection() {
+        guard let webView, view.window?.isVisible == true, !outline.headings.isEmpty else { return }
+        let script = """
+            // A heading becomes current once it scrolls above `line`. Over the last screenful
+            // the line slides down the window, so headings too close to the end to reach the
+            // top still take their turn, in order.
+            const height = window.innerHeight;
+            const remaining = document.documentElement.scrollHeight - (window.scrollY + height);
+            const progress = Math.max(0, Math.min(1, 1 - remaining / height));
+            const line = 80 + (height - 120) * progress;
+            let current = null;
+            for (const h of document.querySelectorAll('.cell.markdown :is(h1, h2, h3, h4, h5, h6)[id]')) {
+                if (h.getBoundingClientRect().top > line) break;
+                current = h.id;
+            }
+            return { current, scrollY: window.scrollY };
+            """
+        webView.callAsyncJavaScript(script, arguments: [:], in: nil, in: .page) { [weak self] result in
+            guard let self, case .success(let value) = result,
+                  let state = value as? [String: Any], let scrollY = state["scrollY"] as? Double else { return }
+            if let picked = self.pickedHeading {
+                if picked.scrollY == nil || picked.scrollY == scrollY {
+                    self.pickedHeading = (picked.id, scrollY)
+                    return
+                }
+                self.pickedHeading = nil
+            }
+            let id = state["current"] as? String ?? self.outline.headings.first?.id
+            if self.outline.current != id { self.outline.current = id }
+        }
+    }
 
     // MARK: Show code / outputs
 

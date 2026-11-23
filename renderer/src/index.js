@@ -1,7 +1,7 @@
 // Entry point: exposes NBRender.renderNotebook(json, optionsJSON) -> resultJSON.
 // Runs in a bare JavaScriptCore context (no DOM, no window).
 import hljs from "highlight.js/lib/common";
-import { renderMarkdown, resetMacros } from "./markdown.js";
+import { collectedHeadings, renderMarkdown, resetHeadings, resetMacros } from "./markdown.js";
 import { createOutputRenderer } from "./outputs.js";
 import { setAttachments, setRemoteImages } from "./images.js";
 import { escapeHtml, joinSource } from "./util.js";
@@ -46,6 +46,7 @@ export function renderNotebook(jsonText, optionsJSON) {
     nb.metadata?.language_info?.name || nb.metadata?.kernelspec?.language || "python";
   const outputs = createOutputRenderer({ allowScripts: !!options.allowScripts });
   resetMacros();
+  resetHeadings();
   setRemoteImages(options.remoteImages);
 
   const html = nb.cells
@@ -55,7 +56,7 @@ export function renderNotebook(jsonText, optionsJSON) {
         case "markdown":
           setAttachments(cell.attachments);
           try {
-            return `<section class="cell markdown">${renderMarkdown(src)}</section>`;
+            return `<section class="cell markdown">${renderMarkdown(src, { collectHeadings: true })}</section>`;
           } finally {
             setAttachments(null);
           }
@@ -82,5 +83,6 @@ export function renderNotebook(jsonText, optionsJSON) {
     language,
     cellCount: nb.cells.length,
     interactiveOutputs: outputs.interactiveOutputs,
+    headings: collectedHeadings(),
   });
 }

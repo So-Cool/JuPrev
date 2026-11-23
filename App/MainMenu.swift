@@ -89,6 +89,8 @@ enum MainMenu {
         let menu = NSMenu(title: "View")
         menu.addItem(item("Reload", #selector(NotebookWindowController.reloadNotebook(_:)), "r"))
         menu.addItem(.separator())
+        menu.addItem(item("Show Outline", #selector(NotebookWindowController.toggleOutline(_:)), "s", [.command, .control]))
+        menu.addItem(.separator())
         menu.addItem(item("Show Code", #selector(NotebookWindowController.toggleCode(_:)), "c", [.command, .option]))
         menu.addItem(item("Show Outputs", #selector(NotebookWindowController.toggleOutputs(_:)), "o", [.command, .option]))
         menu.addItem(.separator())

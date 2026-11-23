@@ -1,17 +1,33 @@
 import AppKit
+import SwiftUI
 
 final class NotebookWindowController: NSWindowController, NSMenuItemValidation {
+    private static let outlineVisibleKey = "OutlineVisible"
+
     private let notebookViewController: NotebookViewController
+    private let splitViewController = NSSplitViewController()
+    private let outlineItem: NSSplitViewItem
 
     init(document: NotebookDocument) {
-        notebookViewController = NotebookViewController(document: document)
+        let outline = OutlineModel()
+        notebookViewController = NotebookViewController(document: document, outline: outline)
+
+        outlineItem = NSSplitViewItem(sidebarWithViewController: NSHostingController(rootView: OutlineView(model: outline)))
+        outlineItem.minimumThickness = 180
+        outlineItem.maximumThickness = 400
+        outlineItem.canCollapse = true
+        outlineItem.isCollapsed = !UserDefaults.standard.bool(forKey: Self.outlineVisibleKey)
+        splitViewController.addSplitViewItem(outlineItem)
+        splitViewController.addSplitViewItem(NSSplitViewItem(viewController: notebookViewController))
+        notebookViewController.outlineVisible = !outlineItem.isCollapsed
+
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 900, height: 1000),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: true
         )
-        window.contentViewController = notebookViewController
+        window.contentViewController = splitViewController
         window.setContentSize(NSSize(width: 900, height: 1000))
         window.minSize = NSSize(width: 420, height: 300)
         window.titlebarSeparatorStyle = .line
@@ -32,6 +48,8 @@ final class NotebookWindowController: NSWindowController, NSMenuItemValidation {
             item.state = notebookViewController.showCode ? .on : .off
         case #selector(toggleOutputs(_:)):
             item.state = notebookViewController.showOutputs ? .on : .off
+        case #selector(toggleOutline(_:)):
+            item.title = outlineItem.isCollapsed ? "Show Outline" : "Hide Outline"
         default:
             break
         }
@@ -45,6 +63,14 @@ final class NotebookWindowController: NSWindowController, NSMenuItemValidation {
     // Edit ▸ Find (tags are NSTextFinder.Action values). A selector of our own: with the
     // standard performTextFinderAction(_:), WKWebView (first responder) takes the action.
     @objc func findInNotebook(_ sender: Any?) { notebookViewController.runFindAction(sender) }
+    @objc func toggleOutline(_ sender: Any?) {
+        outlineItem.animator().isCollapsed.toggle()
+        let visible = !outlineItem.isCollapsed
+        notebookViewController.outlineVisible = visible
+        // New windows open the way the last one was left.
+        UserDefaults.standard.set(visible, forKey: Self.outlineVisibleKey)
+    }
+
     @objc func toggleCode(_ sender: Any?) { notebookViewController.toggleCode() }
     @objc func toggleOutputs(_ sender: Any?) { notebookViewController.toggleOutputs() }
     @objc func actualSize(_ sender: Any?) { notebookViewController.zoom(to: 1) }

@@ -68,6 +68,24 @@ struct NotebookRendererTests {
         #expect(html.components(separatedBy: "katex-error").count == 2, "only the deliberately broken expression fails")
     }
 
+    @Test func headingsGetJupyterIdsAndFormTheOutline() throws {
+        let nb = #"""
+        {"nbformat": 4, "metadata": {}, "cells": [
+          {"cell_type": "markdown", "metadata": {}, "source": "# Intro\n## The $\\alpha$ parameter\n## Intro"},
+          {"cell_type": "code", "metadata": {}, "source": "", "outputs": [
+            {"output_type": "display_data", "data": {"text/markdown": "# Not in outline"}}]}
+        ]}
+        """#
+        let result = try Self.renderer.render(data: Data(nb.utf8), notebookFolder: nil)
+        #expect(result.headings == [
+            NotebookHeading(level: 1, text: "Intro", id: "Intro"),
+            NotebookHeading(level: 2, text: #"The \alpha parameter"#, id: #"The-\alpha-parameter"#),
+            NotebookHeading(level: 2, text: "Intro", id: "Intro-1"),
+        ])
+        #expect(result.bodyHTML.contains(#"<h1 id="Intro">"#))
+        #expect(result.bodyHTML.contains(#"<h1 id="Not-in-outline">"#), "output headings get ids but stay out of the outline")
+    }
+
     @Test func titleComesFromFirstHeading() throws {
         #expect(try render("markdown-math.ipynb").title == "Markdown and math")
         #expect(try render("outputs.ipynb").title == "outputs", "falls back to the file name")
