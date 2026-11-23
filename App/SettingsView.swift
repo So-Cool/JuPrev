@@ -30,10 +30,14 @@ struct SettingsView: View {
                     Text("CSS files in this folder appear as themes. After editing one, View ▸ Reload (⌘R) applies it.")
                 }
                 Toggle("Show code", isOn: $settings.showCode)
-                Toggle(isOn: $settings.showOutputs) {
-                    Text("Show outputs")
-                    Text("Defaults for Quick Look and for windows. View ▸ Show Code and Show Outputs change just the current window.")
+                Toggle("Show outputs", isOn: $settings.showOutputs)
+                Toggle(isOn: $settings.showStderr) {
+                    Text("Show stderr")
+                    Text("Warnings, progress bars and logs written to standard error. Errors and tracebacks are always shown.")
                 }
+                Text("Defaults for Quick Look and for windows. View ▸ Show Code, Show Outputs and Show stderr change just the current window.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("Images") {
                 Toggle(isOn: $settings.trustParentFolders) {

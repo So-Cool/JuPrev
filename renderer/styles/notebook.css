@@ -199,12 +199,16 @@ pre.source code.hljs { padding: 0; background: transparent; font-size: inherit; 
 .ansi-italic { font-style: italic; }
 .ansi-underline { text-decoration: underline; }
 
-/* View ▸ Show Code / Show Outputs (classes on <html>). */
+/* View ▸ Show Code / Show Outputs / Show stderr (classes on <html>). */
 html.hide-code .cell.code .input { display: none; }
 html.hide-code .cell.code .outputs { margin-top: 0; }
 html.hide-code .cell.code:not(:has(.outputs)) { display: none; }
 html.hide-outputs .cell.code .outputs { display: none; }
 html.hide-code.hide-outputs .cell.code { display: none; }
+html.hide-stderr .output-stream.stderr { display: none; }
+/* Don't leave an empty output area (or, with code hidden, an empty cell) behind. */
+html.hide-stderr .outputs:not(:has(> :not(.output-stream.stderr))) { display: none; }
+html.hide-code.hide-stderr .cell.code:not(:has(.outputs > :not(.output-stream.stderr))) { display: none; }
 
 /* While the app's find bar is open (it sets this class), make the found text stand out:
    focus is in the search field, so WebKit would otherwise draw it as a pale inactive selection. */

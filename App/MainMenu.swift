@@ -103,6 +103,7 @@ enum MainMenu {
         menu.addItem(.separator())
         menu.addItem(item("Show Code", #selector(NotebookWindowController.toggleCode(_:)), "c", [.command, .option]))
         menu.addItem(item("Show Outputs", #selector(NotebookWindowController.toggleOutputs(_:)), "o", [.command, .option]))
+        menu.addItem(item("Show stderr", #selector(NotebookWindowController.toggleStderr(_:)), "l", [.command, .option]))
         menu.addItem(.separator())
         menu.addItem(item("Actual Size", #selector(NotebookWindowController.actualSize(_:)), "0"))
         menu.addItem(item("Zoom In", #selector(NotebookWindowController.zoomIn(_:)), "+"))

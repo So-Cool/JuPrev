@@ -12,6 +12,8 @@ options:
   --no-local-images         don't read any local image files
   --allow-scripts           keep interactive outputs and allow scripts (CSP relaxed)
   --theme <id>              default, serif, compact or custom:<file>.css
+  --hide-code, --hide-outputs, --hide-stderr
+                            hide those parts (as View ▸ Show Code / Outputs / stderr)
   --body-only               print only the cells' HTML fragment
   --time                    print timing to stderr
 
@@ -46,6 +48,9 @@ while !args.isEmpty {
     case "--trust-parent-folders": options.localImages = .trustParentFolders
     case "--no-local-images": options.localImages = .disabled
     case "--allow-scripts": options.allowScripts = true
+    case "--hide-code": options.showCode = false
+    case "--hide-outputs": options.showOutputs = false
+    case "--hide-stderr": options.showStderr = false
     case "--theme":
         guard !args.isEmpty else { fail("--theme needs a theme id", code: 64) }
         let id = args.removeFirst()

@@ -15,14 +15,18 @@ enum PageTemplate {
     }
 
     /// Classes on <html> that hide parts of the notebook (see notebook.css).
-    static func htmlClasses(showCode: Bool, showOutputs: Bool) -> String {
-        [showCode ? nil : "hide-code", showOutputs ? nil : "hide-outputs"].compactMap { $0 }.joined(separator: " ")
+    static func htmlClasses(for options: RenderOptions) -> String {
+        [
+            options.showCode ? nil : "hide-code",
+            options.showOutputs ? nil : "hide-outputs",
+            options.showStderr ? nil : "hide-stderr",
+        ].compactMap { $0 }.joined(separator: " ")
     }
 
     static func document(title: String, body: String, options: RenderOptions) -> String {
         """
         <!doctype html>
-        <html class="\(htmlClasses(showCode: options.showCode, showOutputs: options.showOutputs))">
+        <html class="\(htmlClasses(for: options))">
         <head>
         <meta charset="utf-8">
         <meta http-equiv="Content-Security-Policy" content="\(csp(for: options))">

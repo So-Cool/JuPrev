@@ -71,15 +71,15 @@ Homebrew prints this reminder too.
   JuPrev doesn't take over double-click from your current notebook app;
   to make it the default, use Get Info ▸ Open with ▸ Change All.
 - **Settings** (JuPrev ▸ Settings…):
-  the theme, whether code and outputs are shown, and whether images may load
+  the theme, whether code, outputs and stderr are shown, and whether images may load
   from parent folders and from the web (both off by default).
-  Theme and code/output choices apply to Quick Look too.
+  Theme and show/hide choices apply to Quick Look too.
 
 | Shortcut | In the viewer |
 | -------- | ------------- |
 | ⌃⌘S      | Show/hide the outline (remembered for new windows) |
 | ⌘F, ⌘G, ⇧⌘G, ⌘E | Find, next/previous match, find the selection |
-| ⌥⌘C, ⌥⌘O | Show/hide code and outputs in this window (Settings sets the default) |
+| ⌥⌘C, ⌥⌘O, ⌥⌘L | Show/hide code, outputs and stderr (warnings, progress bars, logs) in this window; Settings sets the default |
 | ⌘R       | Reload (the notebook also reloads by itself when it changes on disk) |
 | ⌘+, ⌘−, ⌘0 | Zoom |
 | ⇧⌘E, ⌥⌘E | Export as HTML (static, no scripts) or PDF |

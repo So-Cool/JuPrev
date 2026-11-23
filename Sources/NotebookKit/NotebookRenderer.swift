@@ -11,6 +11,7 @@ public struct RenderOptions: Equatable, Sendable {
     /// Hide code cells' source / outputs (CSS classes on <html>, so they can be toggled live).
     public var showCode: Bool
     public var showOutputs: Bool
+    public var showStderr: Bool
     /// Extra CSS applied after the base stylesheet (see `Themes`).
     public var themeCSS: String?
 
@@ -20,6 +21,7 @@ public struct RenderOptions: Equatable, Sendable {
         allowScripts: Bool = false,
         showCode: Bool = true,
         showOutputs: Bool = true,
+        showStderr: Bool = true,
         themeCSS: String? = nil
     ) {
         self.localImages = localImages
@@ -27,18 +29,20 @@ public struct RenderOptions: Equatable, Sendable {
         self.allowScripts = allowScripts
         self.showCode = showCode
         self.showOutputs = showOutputs
+        self.showStderr = showStderr
         self.themeCSS = themeCSS
     }
 
     /// Options from the shared settings; the app overrides what a window has toggled.
     /// Quick Look passes `remoteImages: false`: it never loads remote content.
-    public init(settings: JuPrevSettings, remoteImages: Bool? = nil, allowScripts: Bool = false, showCode: Bool? = nil, showOutputs: Bool? = nil) {
+    public init(settings: JuPrevSettings, remoteImages: Bool? = nil, allowScripts: Bool = false, showCode: Bool? = nil, showOutputs: Bool? = nil, showStderr: Bool? = nil) {
         self.init(
             localImages: settings.localImagePolicy,
             remoteImages: remoteImages ?? settings.loadRemoteImages,
             allowScripts: allowScripts,
             showCode: showCode ?? settings.showCode,
             showOutputs: showOutputs ?? settings.showOutputs,
+            showStderr: showStderr ?? settings.showStderr,
             themeCSS: Themes.css(for: settings.theme)
         )
     }

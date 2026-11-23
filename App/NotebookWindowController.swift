@@ -48,6 +48,8 @@ final class NotebookWindowController: NSWindowController, NSMenuItemValidation {
             item.state = notebookViewController.showCode ? .on : .off
         case #selector(toggleOutputs(_:)):
             item.state = notebookViewController.showOutputs ? .on : .off
+        case #selector(toggleStderr(_:)):
+            item.state = notebookViewController.showStderr ? .on : .off
         case #selector(toggleOutline(_:)):
             item.title = outlineItem.isCollapsed ? "Show Outline" : "Hide Outline"
         default:
@@ -78,6 +80,7 @@ final class NotebookWindowController: NSWindowController, NSMenuItemValidation {
 
     @objc func toggleCode(_ sender: Any?) { notebookViewController.toggleCode() }
     @objc func toggleOutputs(_ sender: Any?) { notebookViewController.toggleOutputs() }
+    @objc func toggleStderr(_ sender: Any?) { notebookViewController.toggleStderr() }
     @objc func actualSize(_ sender: Any?) { notebookViewController.zoom(to: 1) }
     @objc func zoomIn(_ sender: Any?) { notebookViewController.zoom(by: 1.1) }
     @objc func zoomOut(_ sender: Any?) { notebookViewController.zoom(by: 1 / 1.1) }

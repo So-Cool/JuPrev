@@ -26,9 +26,11 @@ final class NotebookViewController: NSViewController {
     /// until then the window follows the global setting.
     private var showCodeOverride: Bool?
     private var showOutputsOverride: Bool?
+    private var showStderrOverride: Bool?
 
     var showCode: Bool { showCodeOverride ?? JuPrevSettings.load().showCode }
     var showOutputs: Bool { showOutputsOverride ?? JuPrevSettings.load().showOutputs }
+    var showStderr: Bool { showStderrOverride ?? JuPrevSettings.load().showStderr }
     private var pageZoom: CGFloat = 1
     private var renderTask: Task<Void, Never>?
     private var pendingScrollY: Double?
@@ -106,7 +108,8 @@ final class NotebookViewController: NSViewController {
             settings: JuPrevSettings.load(),
             allowScripts: scriptsAllowed,
             showCode: showCodeOverride,
-            showOutputs: showOutputsOverride
+            showOutputs: showOutputsOverride,
+            showStderr: showStderrOverride
         )
 
         let html: String
@@ -256,7 +259,10 @@ final class NotebookViewController: NSViewController {
         panel.beginSheetModal(for: window) { response in
             guard response == .OK, let url = panel.url else { return }
             Task { @MainActor in
-                let options = RenderOptions(settings: JuPrevSettings.load(), showCode: self.showCode, showOutputs: self.showOutputs)
+                let options = RenderOptions(
+                    settings: JuPrevSettings.load(),
+                    showCode: self.showCode, showOutputs: self.showOutputs, showStderr: self.showStderr
+                )
                 do {
                     let rendered = try await RenderService.shared.render(document.contents, fileURL: document.fileURL, options: options).get()
                     try Data(rendered.html.utf8).write(to: url, options: .atomic)
@@ -319,6 +325,11 @@ final class NotebookViewController: NSViewController {
     func toggleOutputs() {
         showOutputsOverride = !showOutputs
         setPageClass("hide-outputs", !showOutputs)
+    }
+
+    func toggleStderr() {
+        showStderrOverride = !showStderr
+        setPageClass("hide-stderr", !showStderr)
     }
 
     /// Instant: flips a class on the page instead of re-rendering.

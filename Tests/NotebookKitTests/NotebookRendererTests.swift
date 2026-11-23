@@ -141,8 +141,10 @@ struct NotebookRendererTests {
 
     @Test func hiddenPartsAreClassesOnTheRoot() throws {
         #expect(try render("outputs.ipynb").html.contains(#"<html class="">"#))
-        let hidden = try render("outputs.ipynb", RenderOptions(showCode: false, showOutputs: false)).html
-        #expect(hidden.contains(#"<html class="hide-code hide-outputs">"#))
+        let hidden = try render("outputs.ipynb", RenderOptions(showCode: false, showOutputs: false, showStderr: false)).html
+        #expect(hidden.contains(#"<html class="hide-code hide-outputs hide-stderr">"#))
+        #expect(try render("outputs.ipynb", RenderOptions(showStderr: false)).html.contains(#"<html class="hide-stderr">"#))
+        #expect(NotebookRenderer.stylesheet.contains("html.hide-stderr .output-stream.stderr"))
         #expect(NotebookRenderer.stylesheet.contains("html.hide-code .cell.code .input"))
     }
 
@@ -231,6 +233,7 @@ struct SettingsTests {
         #expect(JuPrevSettings.load(from: url).trustParentFolders)
         #expect(!JuPrevSettings.load(from: url).loadRemoteImages)
         #expect(JuPrevSettings.load(from: url).showCode, "missing keys keep their defaults")
+        #expect(JuPrevSettings.load(from: url).showStderr)
         #expect(JuPrevSettings.load(from: url).theme == "default")
         #expect(JuPrevSettings.load(from: url).localImagePolicy == .trustParentFolders)
 
