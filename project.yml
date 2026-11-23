@@ -13,8 +13,8 @@ settings:
     # Only needed for notarization, and it would deny JavaScriptCore its JIT.
     ENABLE_HARDENED_RUNTIME: NO
     SWIFT_VERSION: "5.10"
-    MARKETING_VERSION: "0.1"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "0.2"
+    CURRENT_PROJECT_VERSION: "2"
 packages:
   JuPrev:
     path: .
