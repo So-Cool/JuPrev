@@ -149,7 +149,7 @@ the rules above decide which ones.
 
 | Path                      | What |
 | ------------------------- | ---- |
-| `renderer/`               | JS renderer (markdown-it, KaTeX, highlight.js) and the default stylesheet. `npm run build` writes `Sources/NotebookKit/Resources/{render.js,style.css}`, `ACKNOWLEDGEMENTS.md` and `App/Credits.html`, all committed so Swift builds don't need Node. |
+| `renderer/`               | JS renderer (markdown-it, KaTeX, highlight.js), the default stylesheet and the bundled themes; see [Renderer build](#renderer-build). |
 | `Sources/NotebookKit/`    | Runs the JS bundle in JavaScriptCore and produces a self-contained static HTML page. Also owns the local-image policy, the shared settings file, the web view configuration and the thumbnail summary. |
 | `Sources/juprev/`         | CLI: `juprev render notebook.ipynb -o out.html` |
 | `QuickLook/`              | View-based Quick Look preview extension. |
@@ -176,13 +176,32 @@ qlmanage -p path/to/notebook.ipynb
 ```
 
 Settings live in `~/Library/Application Support/JuPrev/settings.json`,
-shared by the app and the extensions:
+shared by the app and the extensions (these are the defaults):
 
 ```json
 { "trustParentFolders": false,
-  "loadRemoteImages": false
+  "loadRemoteImages": false,
+  "showCode": true,
+  "showOutputs": true,
+  "showStderr": true,
+  "theme": "default"
 }
 ```
+
+### Renderer build
+
+`npm run build` in `renderer/` (`renderer/build.mjs`) turns the renderer's sources
+into files that are committed, so building the Swift code never needs Node:
+
+| Source | Output | How |
+| ------ | ------ | --- |
+| `renderer/src/*.js` | `Sources/NotebookKit/Resources/render.js` | Bundled and minified by esbuild |
+| `renderer/styles/notebook.css` | `Sources/NotebookKit/Resources/style.css` | Combined with KaTeX's CSS (fonts inlined) and the highlight.js themes |
+| `renderer/styles/themes/*.css` | `Sources/NotebookKit/Resources/themes/` | Copied as they are |
+| Licence files of the bundled npm packages | `ACKNOWLEDGEMENTS.md`, `App/Credits.html` | Generated |
+
+Edit only the sources, then run the build: the outputs are overwritten.
+The **Test** workflow fails if the committed outputs don't match a fresh build.
 
 ## Release
 
