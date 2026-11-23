@@ -4,6 +4,16 @@ import { escapeHtml } from "./util.js";
 
 let attachments = {};
 let remoteImages = false;
+let blockedCounts = {};
+
+/** Per-render tally of blocked images by reason, so the app can offer to load them once. */
+export function resetBlockedImages() {
+  blockedCounts = {};
+}
+export const blockedImages = () => ({
+  parentFolders: blockedCounts.outsideNotebookFolder || 0,
+  remote: blockedCounts.remote || 0,
+});
 
 /** Whether `https://` images are kept (the app's "Load remote images" setting). */
 export function setRemoteImages(enabled) {
@@ -17,6 +27,7 @@ export function setAttachments(a) {
 
 const BLOCKED_REASONS = {
   remote: "Remote image not loaded",
+  insecureRemote: "Insecure (http) image not loaded",
   outsideNotebookFolder: "Image is outside the notebook's folder",
   absolutePath: "Absolute image paths are not loaded",
   missing: "Image not found",
@@ -43,7 +54,8 @@ function resolve(src) {
     return { src: `data:${mime};base64,${data.replace(/\s/g, "")}` };
   }
   if (/^https:\/\//i.test(src)) return remoteImages ? { src } : { blocked: "remote" };
-  if (/^http:\/\//i.test(src) || src.startsWith("//")) return { blocked: "remote" };
+  // Plain http (and protocol-relative) images never load, not even with remote images on.
+  if (/^http:\/\//i.test(src) || src.startsWith("//")) return { blocked: "insecureRemote" };
   const host = globalThis.__juprevResolveImage;
   if (typeof host !== "function") return { blocked: "disabled" };
   return JSON.parse(host(src));
@@ -62,6 +74,7 @@ export function renderImage(src, alt, title, originalTag) {
     const t = title ? ` title="${escapeHtml(title)}"` : "";
     return `<img src="${src}" alt="${escapeHtml(alt || "")}"${t}>`;
   }
+  blockedCounts[r.blocked] = (blockedCounts[r.blocked] || 0) + 1;
   const reason = BLOCKED_REASONS[r.blocked] || "Image not loaded";
   return (
     `<span class="image-placeholder" data-reason="${escapeHtml(r.blocked || "unknown")}" title="${escapeHtml(src)}">` +

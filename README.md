@@ -126,7 +126,7 @@ Notebooks can contain anything, so JuPrev treats them as untrusted:
   notebook saved or a placeholder.
   In the app, a bar offers **Allow Scripts** for that window only.
   It's never remembered, it's switched off again when the notebook changes on
-  disk, and Quick Look never runs scripts.
+  disk or is reloaded (⌘R), and Quick Look never runs scripts.
 - **Nothing from the Internet by default.**
   Images linked from the web load only if you turn on *Load remote images*,
   and then only in the app and in HTML it exports (or `juprev render` writes);
@@ -138,6 +138,10 @@ Notebooks can contain anything, so JuPrev treats them as untrusted:
   image on the disk.
   Symlinks are resolved before the folder check and absolute paths are never
   loaded.
+- **Load once.** With either image setting off, a bar (and View ▸ Load Images
+  from Parent Folders / Load Remote Images) offers to load the images it left
+  out, for that window only, cleared like Allow Scripts.
+  Plain `http://` images never load.
 
 The app and its extensions are sandboxed.
 Outside the sandbox they read only images next to a notebook (the rules above

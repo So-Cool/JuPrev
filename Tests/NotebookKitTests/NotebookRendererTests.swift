@@ -191,6 +191,22 @@ struct NotebookRendererTests {
         #expect(!html.contains(#""onerror=""#))
     }
 
+    @Test func blockedImagesAreCountedByReason() throws {
+        let strict = try render("images/nb/images.ipynb")
+        #expect(strict.blockedImages == BlockedImages(parentFolders: 1, remote: 1))
+        let open = try render("images/nb/images.ipynb", RenderOptions(localImages: .trustParentFolders, remoteImages: true))
+        #expect(open.blockedImages == BlockedImages())
+        #expect(RenderOptions(settings: JuPrevSettings(), localImages: .trustParentFolders).localImages == .trustParentFolders,
+                "a window's one-off choice overrides the setting")
+    }
+
+    @Test func plainHTTPImagesNeverLoad() throws {
+        let html = try render(cells: #"{"cell_type": "markdown", "metadata": {}, "source": "![a](http://example.com/a.png)"}"#,
+                              RenderOptions(remoteImages: true))
+        #expect(html.bodyHTML.contains(#"data-reason="insecureRemote""#))
+        #expect(html.blockedImages.remote == 0, "loading remote images once wouldn't help, so it isn't offered")
+    }
+
     @Test func noNotebookFolderMeansNoLocalImages() throws {
         let data = try Data(contentsOf: fixtures.appendingPathComponent("images/nb/images.ipynb"))
         let html = try Self.renderer.render(data: data, notebookFolder: nil).bodyHTML

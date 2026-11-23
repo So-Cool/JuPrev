@@ -35,9 +35,17 @@ public struct RenderOptions: Equatable, Sendable {
 
     /// Options from the shared settings; the app overrides what a window has toggled.
     /// Quick Look passes `remoteImages: false`: it never loads remote content.
-    public init(settings: JuPrevSettings, remoteImages: Bool? = nil, allowScripts: Bool = false, showCode: Bool? = nil, showOutputs: Bool? = nil, showStderr: Bool? = nil) {
+    public init(
+        settings: JuPrevSettings,
+        localImages: LocalImagePolicy? = nil,
+        remoteImages: Bool? = nil,
+        allowScripts: Bool = false,
+        showCode: Bool? = nil,
+        showOutputs: Bool? = nil,
+        showStderr: Bool? = nil
+    ) {
         self.init(
-            localImages: settings.localImagePolicy,
+            localImages: localImages ?? settings.localImagePolicy,
             remoteImages: remoteImages ?? settings.loadRemoteImages,
             allowScripts: allowScripts,
             showCode: showCode ?? settings.showCode,
@@ -55,6 +63,19 @@ public struct NotebookHeading: Codable, Equatable, Hashable, Sendable {
     public let id: String
 }
 
+/// Images left out because of the image settings, which the app can offer to load once.
+public struct BlockedImages: Codable, Equatable, Sendable {
+    /// Relative paths reaching outside the notebook's folder.
+    public let parentFolders: Int
+    /// `https://` images.
+    public let remote: Int
+
+    public init(parentFolders: Int = 0, remote: Int = 0) {
+        self.parentFolders = parentFolders
+        self.remote = remote
+    }
+}
+
 public struct RenderedNotebook: Sendable {
     /// A complete, self-contained HTML document.
     public let html: String
@@ -69,6 +90,7 @@ public struct RenderedNotebook: Sendable {
     public let interactiveOutputs: Int
     /// Headings of markdown cells, in order (not headings inside outputs).
     public let headings: [NotebookHeading]
+    public let blockedImages: BlockedImages
 }
 
 public enum NotebookRenderError: Error, Equatable, LocalizedError {
@@ -165,7 +187,8 @@ public final class NotebookRenderer {
             language: payload.language,
             cellCount: payload.cellCount,
             interactiveOutputs: payload.interactiveOutputs,
-            headings: payload.headings
+            headings: payload.headings,
+            blockedImages: payload.blockedImages
         )
     }
 
@@ -176,6 +199,7 @@ public final class NotebookRenderer {
         let cellCount: Int
         let interactiveOutputs: Int
         let headings: [NotebookHeading]
+        let blockedImages: BlockedImages
     }
 
     private static func error(from exception: JSValue) -> NotebookRenderError {

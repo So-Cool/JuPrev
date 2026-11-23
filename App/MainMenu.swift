@@ -97,6 +97,9 @@ enum MainMenu {
         menu.addItem(.separator())
         menu.addItem(item("Show Outline", #selector(NotebookWindowController.toggleOutline(_:)), "s", [.command, .control]))
         menu.addItem(.separator())
+        menu.addItem(item("Load Images from Parent Folders", #selector(NotebookWindowController.loadParentFolderImages(_:))))
+        menu.addItem(item("Load Remote Images", #selector(NotebookWindowController.loadRemoteImages(_:))))
+        menu.addItem(.separator())
         let themes = NSMenu(title: "Theme")
         themes.delegate = ThemeMenu.shared
         menu.addItem(submenu(themes))

@@ -3,7 +3,7 @@
 import hljs from "highlight.js/lib/common";
 import { collectedHeadings, renderMarkdown, resetHeadings, resetMacros } from "./markdown.js";
 import { createOutputRenderer } from "./outputs.js";
-import { setAttachments, setRemoteImages } from "./images.js";
+import { blockedImages, resetBlockedImages, setAttachments, setRemoteImages } from "./images.js";
 import { escapeHtml, joinSource } from "./util.js";
 
 function highlight(code, lang) {
@@ -44,6 +44,7 @@ export function renderNotebook(jsonText, optionsJSON) {
   resetMacros();
   resetHeadings();
   setRemoteImages(options.remoteImages);
+  resetBlockedImages();
 
   const html = nb.cells
     .map((cell) => {
@@ -80,5 +81,6 @@ export function renderNotebook(jsonText, optionsJSON) {
     cellCount: nb.cells.length,
     interactiveOutputs: outputs.interactiveOutputs,
     headings: collectedHeadings(),
+    blockedImages: blockedImages(),
   });
 }

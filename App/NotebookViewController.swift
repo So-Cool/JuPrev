@@ -6,7 +6,8 @@ import WebKit
 
 private let logger = Logger(subsystem: "me.kcpr.juprev", category: "viewer")
 
-/// Shows one rendered notebook, with the interactive-outputs bar and the find bar above it.
+/// Shows one rendered notebook, with notice bars (interactive outputs, images left out)
+/// and the find bar above it.
 final class NotebookViewController: NSViewController {
     private weak var document: NotebookDocument?
     private let outline: OutlineModel
@@ -14,14 +15,21 @@ final class NotebookViewController: NSViewController {
     /// A heading the user picked, kept highlighted until they scroll away from where
     /// the jump landed (near the end, a jump can't bring the heading to the top).
     private var pickedHeading: (id: String, scrollY: Double?)?
-    private let bar = InteractiveOutputsBar()
+    private let scriptsBar = NoticeBar()
+    private let imagesBar = NoticeBar()
     private let findBar = FindBar()
     private let webContainer = NSView()
     private var webView: WKWebView?
     private var webViewMode: NotebookWebView.Mode?
 
-    /// Per window and never remembered, like Jupyter's per-session trust.
+    // One-off permissions for this window, beyond the settings. Never remembered, and
+    // cleared when the notebook changes on disk or is reloaded with ⌘R (see `revokeOneOffs`),
+    // but kept across re-renders for theme or setting changes.
     private var scriptsAllowed = false
+    private(set) var parentFolderImagesOnce = false
+    private(set) var remoteImagesOnce = false
+    /// What the last render left out, for the images bar and the View menu.
+    private(set) var blockedImages = BlockedImages()
     /// Set once the user toggles View ▸ Show Code / Show Outputs / Show stderr in this
     /// window; until then the window follows the global setting.
     private var showCodeOverride: Bool?
@@ -63,12 +71,11 @@ final class NotebookViewController: NSViewController {
         stack.orientation = .vertical
         stack.spacing = 0
         stack.alignment = .width
-        stack.addArrangedSubview(bar)
+        stack.addArrangedSubview(scriptsBar)
+        stack.addArrangedSubview(imagesBar)
         stack.addArrangedSubview(findBar)
         stack.addArrangedSubview(webContainer)
         webContainer.setContentHuggingPriority(.defaultLow, for: .vertical)
-        bar.isHidden = true
-        bar.onToggleScripts = { [weak self] in self?.toggleScripts() }
         findBar.isHidden = true
         findBar.onClose = { [weak self] in
             guard let self, let webView = self.webView else { return }
@@ -98,8 +105,8 @@ final class NotebookViewController: NSViewController {
             },
             center.addObserver(forName: NotebookDocument.contentsDidChange, object: document, queue: .main) { [weak self] _ in
                 // Trust is per content, as in Jupyter: a notebook changed on disk is shown
-                // static again until scripts are allowed for it.
-                self?.scriptsAllowed = false
+                // as the settings allow until the user lifts a restriction again.
+                self?.revokeOneOffs()
                 self?.reload(preservingScroll: true)
             },
         ]
@@ -107,6 +114,32 @@ final class NotebookViewController: NSViewController {
     }
 
     // MARK: Rendering
+
+    /// View ▸ Reload (⌘R): a fresh look, so one-off permissions are cleared too.
+    func reloadFromUser() {
+        revokeOneOffs()
+        reload(preservingScroll: true)
+    }
+
+    private func revokeOneOffs() {
+        scriptsAllowed = false
+        parentFolderImagesOnce = false
+        remoteImagesOnce = false
+    }
+
+    /// The settings, with this window's toggles and one-off permissions applied.
+    private func currentOptions(allowScripts: Bool) -> RenderOptions {
+        let settings = JuPrevSettings.load()
+        return RenderOptions(
+            settings: settings,
+            localImages: parentFolderImagesOnce ? .trustParentFolders : nil,
+            remoteImages: remoteImagesOnce ? true : nil,
+            allowScripts: allowScripts,
+            showCode: showCodeOverride,
+            showOutputs: showOutputsOverride,
+            showStderr: showStderrOverride
+        )
+    }
 
     func reload(preservingScroll: Bool) {
         renderTask?.cancel()
@@ -123,26 +156,23 @@ final class NotebookViewController: NSViewController {
         if preservingScroll {
             if let pending = pendingScrollY { scrollY = pending } else { scrollY = await currentScrollY() }
         }
-        let options = RenderOptions(
-            settings: JuPrevSettings.load(),
-            allowScripts: scriptsAllowed,
-            showCode: showCodeOverride,
-            showOutputs: showOutputsOverride,
-            showStderr: showStderrOverride
-        )
+        let options = currentOptions(allowScripts: scriptsAllowed)
 
         let html: String
         let interactiveOutputs: Int
         let headings: [NotebookHeading]
+        let blocked: BlockedImages
         switch await RenderService.shared.render(document.contents, fileURL: document.fileURL, options: options) {
         case .success(let rendered):
             html = rendered.html
             interactiveOutputs = rendered.interactiveOutputs
             headings = rendered.headings
+            blocked = rendered.blockedImages
         case .failure(let error):
             html = NotebookRenderer.errorPage(title: document.displayName, message: error.localizedDescription, themeCSS: options.themeCSS)
             interactiveOutputs = 0
             headings = []
+            blocked = BlockedImages()
         }
         guard !Task.isCancelled else { return }
 
@@ -151,7 +181,9 @@ final class NotebookViewController: NSViewController {
         guard !Task.isCancelled else { return }
 
         logger.notice("rendered \(document.displayName, privacy: .public): \(html.utf8.count / 1024) KB")
-        bar.update(interactiveOutputs: interactiveOutputs, scriptsAllowed: scriptsAllowed)
+        updateScriptsBar(interactiveOutputs: interactiveOutputs)
+        blockedImages = blocked
+        updateImagesBar()
         if outline.headings != headings { outline.headings = headings }
         pendingScrollY = scrollY
         webView.loadHTMLString(html, baseURL: nil)
@@ -190,6 +222,65 @@ final class NotebookViewController: NSViewController {
 
     private func toggleScripts() {
         scriptsAllowed.toggle()
+        reload(preservingScroll: true)
+    }
+
+    // MARK: Notice bars
+
+    private func updateScriptsBar(interactiveOutputs: Int) {
+        if scriptsAllowed {
+            scriptsBar.show(
+                symbol: "exclamationmark.shield", tint: .systemOrange,
+                message: "Scripts are allowed in this window. Interactive outputs can run code and load content from the internet.",
+                actions: [.init(title: "Block Scripts") { [weak self] in self?.toggleScripts() }]
+            )
+        } else if interactiveOutputs > 0 {
+            let outputs = interactiveOutputs == 1 ? "1 interactive output" : "\(interactiveOutputs) interactive outputs"
+            scriptsBar.show(
+                symbol: "lock.shield", tint: .secondaryLabelColor,
+                message: "This notebook has \(outputs). Scripts are blocked, so static versions are shown where the notebook saved one.",
+                actions: [.init(title: "Allow Scripts") { [weak self] in self?.toggleScripts() }]
+            )
+        } else {
+            scriptsBar.hide()
+        }
+    }
+
+    /// Offers to load, once, the images the settings left out. (With a setting on, nothing
+    /// of that kind is blocked, so it isn't offered.)
+    private func updateImagesBar() {
+        let parent = blockedImages.parentFolders, remote = blockedImages.remote
+        guard parent + remote > 0 else {
+            imagesBar.hide()
+            return
+        }
+        let images = { (n: Int) in n == 1 ? "1 image" : "\(n) images" }
+        var parts: [String] = []
+        var actions: [NoticeBar.Action] = []
+        if parent > 0 {
+            parts.append("\(images(parent)) from outside the notebook's folder")
+            actions.append(.init(title: "Load from Parent Folders") { [weak self] in self?.loadParentFolderImagesOnce() })
+        }
+        if remote > 0 {
+            parts.append("\(images(remote)) from the web")
+            actions.append(.init(title: "Load Remote Images") { [weak self] in self?.loadRemoteImagesOnce() })
+        }
+        imagesBar.show(
+            symbol: "photo.badge.exclamationmark", tint: .secondaryLabelColor,
+            message: "Not loaded: \(parts.joined(separator: " and ")). Loading applies to this window until the notebook is reloaded.",
+            actions: actions
+        )
+    }
+
+    func loadParentFolderImagesOnce() {
+        guard !parentFolderImagesOnce else { return }
+        parentFolderImagesOnce = true
+        reload(preservingScroll: true)
+    }
+
+    func loadRemoteImagesOnce() {
+        guard !remoteImagesOnce else { return }
+        remoteImagesOnce = true
         reload(preservingScroll: true)
     }
 
@@ -278,10 +369,8 @@ final class NotebookViewController: NSViewController {
         panel.beginSheetModal(for: window) { response in
             guard response == .OK, let url = panel.url else { return }
             Task { @MainActor in
-                let options = RenderOptions(
-                    settings: JuPrevSettings.load(),
-                    showCode: self.showCode, showOutputs: self.showOutputs, showStderr: self.showStderr
-                )
+                // As shown, including one-off images, but never with scripts.
+                let options = self.currentOptions(allowScripts: false)
                 do {
                     let rendered = try await RenderService.shared.render(document.contents, fileURL: document.fileURL, options: options).get()
                     try Data(rendered.html.utf8).write(to: url, options: .atomic)

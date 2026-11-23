@@ -50,6 +50,13 @@ final class NotebookWindowController: NSWindowController, NSMenuItemValidation {
             item.state = notebookViewController.showOutputs ? .on : .off
         case #selector(toggleStderr(_:)):
             item.state = notebookViewController.showStderr ? .on : .off
+        // Checked once loaded for this window; enabled only when there's something to load.
+        case #selector(loadParentFolderImages(_:)):
+            item.state = notebookViewController.parentFolderImagesOnce ? .on : .off
+            return notebookViewController.blockedImages.parentFolders > 0
+        case #selector(loadRemoteImages(_:)):
+            item.state = notebookViewController.remoteImagesOnce ? .on : .off
+            return notebookViewController.blockedImages.remote > 0
         case #selector(toggleOutline(_:)):
             item.title = outlineItem.isCollapsed ? "Show Outline" : "Hide Outline"
         default:
@@ -60,7 +67,9 @@ final class NotebookWindowController: NSWindowController, NSMenuItemValidation {
 
     // MARK: Menu actions (File, Edit ▸ Find, View), sent up the responder chain from the window
 
-    @objc func reloadNotebook(_ sender: Any?) { notebookViewController.reload(preservingScroll: true) }
+    @objc func reloadNotebook(_ sender: Any?) { notebookViewController.reloadFromUser() }
+    @objc func loadParentFolderImages(_ sender: Any?) { notebookViewController.loadParentFolderImagesOnce() }
+    @objc func loadRemoteImages(_ sender: Any?) { notebookViewController.loadRemoteImagesOnce() }
 
     // Edit ▸ Find (tags are NSTextFinder.Action values). A selector of our own: with the
     // standard performTextFinderAction(_:), WKWebView (first responder) takes the action.
