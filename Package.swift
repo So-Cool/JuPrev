@@ -15,6 +15,7 @@ let package = Package(
                 // Built by `npm run build` in renderer/; committed so Swift builds don't need Node.
                 .copy("Resources/render.js"),
                 .copy("Resources/style.css"),
+                .copy("Resources/themes"),
             ]
         ),
         .executableTarget(name: "juprev", dependencies: ["NotebookKit"]),

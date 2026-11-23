@@ -6,7 +6,8 @@ public enum LocalImagePolicy: String, Codable, Sendable {
     case disabled
     /// Files in the notebook's folder or its subfolders. `..` and symlinks that lead outside are refused.
     case notebookFolder
-    /// Like `notebookFolder`, but relative paths may also climb into parent folders.
+    /// Relative paths may also climb out of the notebook's folder with `..`, which means
+    /// any image on the disk (only absolute paths stay refused).
     case trustParentFolders
 }
 

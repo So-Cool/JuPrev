@@ -11,7 +11,7 @@ pre code.hljs{display:block;overflow-x:auto;padding:1em}code.hljs{padding:3px 5p
   Outdated base version: https://github.com/primer/github-syntax-light
   Current colors taken from GitHub's CSS
 */.hljs{color:#24292e;background:#fff}.hljs-doctag,.hljs-keyword,.hljs-meta .hljs-keyword,.hljs-template-tag,.hljs-template-variable,.hljs-type,.hljs-variable.language_{color:#d73a49}.hljs-title,.hljs-title.class_,.hljs-title.class_.inherited__,.hljs-title.function_{color:#6f42c1}.hljs-attr,.hljs-attribute,.hljs-literal,.hljs-meta,.hljs-number,.hljs-operator,.hljs-selector-attr,.hljs-selector-class,.hljs-selector-id,.hljs-variable{color:#005cc5}.hljs-meta .hljs-string,.hljs-regexp,.hljs-string{color:#032f62}.hljs-built_in,.hljs-symbol{color:#e36209}.hljs-code,.hljs-comment,.hljs-formula{color:#6a737d}.hljs-name,.hljs-quote,.hljs-selector-pseudo,.hljs-selector-tag{color:#22863a}.hljs-subst{color:#24292e}.hljs-section{color:#005cc5;font-weight:700}.hljs-bullet{color:#735c0f}.hljs-emphasis{color:#24292e;font-style:italic}.hljs-strong{color:#24292e;font-weight:700}.hljs-addition{color:#22863a;background-color:#f0fff4}.hljs-deletion{color:#b31d28;background-color:#ffeef0}
-@media (prefers-color-scheme: dark){pre code.hljs{display:block;overflow-x:auto;padding:1em}code.hljs{padding:3px 5px}/*!
+@media screen and (prefers-color-scheme: dark){pre code.hljs{display:block;overflow-x:auto;padding:1em}code.hljs{padding:3px 5px}/*!
   Theme: GitHub Dark
   Description: Dark theme as seen on github.com
   Author: github.com
@@ -222,12 +222,40 @@ pre.source code.hljs { padding: 0; background: transparent; font-size: inherit; 
 .ansi-italic { font-style: italic; }
 .ansi-underline { text-decoration: underline; }
 
+/* View ▸ Show Code / Show Outputs / Show stderr (classes on <html>). */
+html.hide-code .cell.code .input { display: none; }
+html.hide-code .cell.code .outputs { margin-top: 0; }
+html.hide-code .cell.code:not(:has(.outputs)) { display: none; }
+html.hide-outputs .cell.code .outputs { display: none; }
+html.hide-code.hide-outputs .cell.code { display: none; }
+html.hide-stderr .output-stream.stderr { display: none; }
+/* Don't leave an empty output area (or, with code hidden, an empty cell) behind. */
+html.hide-stderr .outputs:not(:has(> :not(.output-stream.stderr))) { display: none; }
+html.hide-code.hide-stderr .cell.code:not(:has(.outputs > :not(.output-stream.stderr))) { display: none; }
+
+/* While the app's find bar is open (it sets this class), make the found text stand out:
+   focus is in the search field, so WebKit would otherwise draw it as a pale inactive selection. */
+html.finding ::selection { background: #ffd60a; color: #000; }
+
 /* Shown instead of a notebook that can't be rendered. */
 .render-error { margin-top: 4em; text-align: center; color: var(--text-muted); }
 .render-error h1 { font-size: 1.25em; color: var(--text); margin-bottom: 0.5em; }
 
+/* Print and PDF export: always light, whatever the appearance; nothing clipped. */
 @media print {
+  :root {
+    --text: #1d1d1f; --text-muted: #6e6e73; --background: #ffffff; --rule: #d2d2d7;
+    --code-background: #f5f5f7; --code-text: #1d1d1f; --stderr-background: #fff5f4;
+    --error-background: #fff0ef; --link: #0066cc; --placeholder-text: #6e6e73; --table-stripe: #fafafa;
+    --ansi-black: #3e424d; --ansi-red: #c4372b; --ansi-green: #2d7d46; --ansi-yellow: #a46400;
+    --ansi-blue: #2163b8; --ansi-magenta: #9a3cad; --ansi-cyan: #1f7a87; --ansi-white: #8e8e93;
+    color-scheme: light;
+  }
+  body { font-size: 11pt; }
   .notebook { max-width: none; padding: 0; }
   .prompt { display: none; }
-  pre { white-space: pre-wrap; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .cell.code, .output-image, pre.source, table { break-inside: avoid; }
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; }
+  html.finding ::selection { background: transparent; color: inherit; }
 }

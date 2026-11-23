@@ -13,8 +13,8 @@ settings:
     # Only needed for notarization, and it would deny JavaScriptCore its JIT.
     ENABLE_HARDENED_RUNTIME: NO
     SWIFT_VERSION: "5.10"
-    MARKETING_VERSION: "0.1"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "0.2"
+    CURRENT_PROJECT_VERSION: "2"
 packages:
   JuPrev:
     path: .
@@ -35,7 +35,10 @@ targets:
       path: App/JuPrev.entitlements
       properties:
         com.apple.security.app-sandbox: true
-        com.apple.security.files.user-selected.read-only: true
+        # Read-write: Export as HTML/PDF saves where the user picks in the save panel.
+        com.apple.security.files.user-selected.read-write: true
+        # File ▸ Print…
+        com.apple.security.print: true
         # Shared settings file read by the Quick Look extension (App Groups need a team ID).
         com.apple.security.temporary-exception.files.home-relative-path.read-write:
           - /Library/Application Support/JuPrev/

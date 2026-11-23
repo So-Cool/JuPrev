@@ -8,20 +8,71 @@ public struct RenderOptions: Equatable, Sendable {
     /// Render `text/html` outputs that contain scripts as-is and relax the page's CSP.
     /// Off by default: notebooks are untrusted.
     public var allowScripts: Bool
+    /// Hide code cells' source / outputs (CSS classes on <html>, so they can be toggled live).
+    public var showCode: Bool
+    public var showOutputs: Bool
+    public var showStderr: Bool
+    /// Extra CSS applied after the base stylesheet (see `Themes`).
+    public var themeCSS: String?
 
-    public init(localImages: LocalImagePolicy = .notebookFolder, remoteImages: Bool = false, allowScripts: Bool = false) {
+    public init(
+        localImages: LocalImagePolicy = .notebookFolder,
+        remoteImages: Bool = false,
+        allowScripts: Bool = false,
+        showCode: Bool = true,
+        showOutputs: Bool = true,
+        showStderr: Bool = true,
+        themeCSS: String? = nil
+    ) {
         self.localImages = localImages
         self.remoteImages = remoteImages
         self.allowScripts = allowScripts
+        self.showCode = showCode
+        self.showOutputs = showOutputs
+        self.showStderr = showStderr
+        self.themeCSS = themeCSS
     }
 
-    /// Options for the app. Quick Look ignores `loadRemoteImages` and never loads remote content.
-    public init(settings: JuPrevSettings, remoteImages: Bool? = nil, allowScripts: Bool = false) {
+    /// Options from the shared settings; the app overrides what a window has toggled.
+    /// Quick Look passes `remoteImages: false`: it never loads remote content.
+    public init(
+        settings: JuPrevSettings,
+        localImages: LocalImagePolicy? = nil,
+        remoteImages: Bool? = nil,
+        allowScripts: Bool = false,
+        showCode: Bool? = nil,
+        showOutputs: Bool? = nil,
+        showStderr: Bool? = nil
+    ) {
         self.init(
-            localImages: settings.localImagePolicy,
+            localImages: localImages ?? settings.localImagePolicy,
             remoteImages: remoteImages ?? settings.loadRemoteImages,
-            allowScripts: allowScripts
+            allowScripts: allowScripts,
+            showCode: showCode ?? settings.showCode,
+            showOutputs: showOutputs ?? settings.showOutputs,
+            showStderr: showStderr ?? settings.showStderr,
+            themeCSS: Themes.css(for: settings.theme)
         )
+    }
+}
+
+/// A markdown heading, for the outline sidebar. `id` is the element id in the page.
+public struct NotebookHeading: Codable, Equatable, Hashable, Sendable {
+    public let level: Int
+    public let text: String
+    public let id: String
+}
+
+/// Images left out because of the image settings, which the app can offer to load once.
+public struct BlockedImages: Codable, Equatable, Sendable {
+    /// Relative paths reaching outside the notebook's folder.
+    public let parentFolders: Int
+    /// `https://` images.
+    public let remote: Int
+
+    public init(parentFolders: Int = 0, remote: Int = 0) {
+        self.parentFolders = parentFolders
+        self.remote = remote
     }
 }
 
@@ -30,13 +81,16 @@ public struct RenderedNotebook: Sendable {
     public let html: String
     /// The notebook's cells as an HTML fragment (no <head>, styles or CSP).
     public let bodyHTML: String
-    /// `metadata.title`, else the first level-1 markdown heading.
+    /// `metadata.title`, else the first level-1 markdown heading, else the file name.
     public let title: String?
     public let language: String
     public let cellCount: Int
     /// Outputs that need JavaScript (widgets, Plotly, Bokeh…). With scripts disabled
     /// these show a static fallback or a placeholder.
     public let interactiveOutputs: Int
+    /// Headings of markdown cells, in order (not headings inside outputs).
+    public let headings: [NotebookHeading]
+    public let blockedImages: BlockedImages
 }
 
 public enum NotebookRenderError: Error, Equatable, LocalizedError {
@@ -64,9 +118,9 @@ public final class NotebookRenderer {
 
     public static let stylesheet: String = loadResource("style", "css")
 
-    /// A styled page explaining why a notebook couldn't be shown.
-    public static func errorPage(title: String, message: String) -> String {
-        PageTemplate.errorDocument(title: title, message: message)
+    /// A styled page explaining why a notebook couldn't be shown, in the given theme.
+    public static func errorPage(title: String, message: String, themeCSS: String? = nil) -> String {
+        PageTemplate.errorDocument(title: title, message: message, themeCSS: themeCSS)
     }
 
     public init() throws {
@@ -106,9 +160,11 @@ public final class NotebookRenderer {
         options: RenderOptions = RenderOptions()
     ) throws -> RenderedNotebook {
         guard !data.isEmpty else { throw NotebookRenderError.invalidJSON("the file is empty") }
-        guard let json = String(data: data, encoding: .utf8) else {
+        guard var json = String(data: data, encoding: .utf8) else {
             throw NotebookRenderError.invalidJSON("not UTF-8 text")
         }
+        // JSON.parse rejects a byte-order mark, which some Windows editors write.
+        if json.hasPrefix("\u{FEFF}") { json.removeFirst() }
         currentResolver = notebookFolder.map { LocalImageResolver(notebookFolder: $0, policy: options.localImages) }
         defer { currentResolver = nil }
 
@@ -130,7 +186,9 @@ public final class NotebookRenderer {
             title: title,
             language: payload.language,
             cellCount: payload.cellCount,
-            interactiveOutputs: payload.interactiveOutputs
+            interactiveOutputs: payload.interactiveOutputs,
+            headings: payload.headings,
+            blockedImages: payload.blockedImages
         )
     }
 
@@ -140,6 +198,8 @@ public final class NotebookRenderer {
         let language: String
         let cellCount: Int
         let interactiveOutputs: Int
+        let headings: [NotebookHeading]
+        let blockedImages: BlockedImages
     }
 
     private static func error(from exception: JSValue) -> NotebookRenderError {

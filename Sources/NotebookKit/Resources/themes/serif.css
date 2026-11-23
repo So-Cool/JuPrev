@@ -1,0 +1,10 @@
+/* Serif: a book-like reading theme. Typography only; colours come from the default theme. */
+body {
+  font: 18px/1.65 "Iowan Old Style", "Charter", "Palatino", Georgia, serif;
+  font-variant-numeric: oldstyle-nums proportional-nums;
+}
+.notebook { max-width: 38em; }
+h1, h2, h3, h4, h5, h6 { font-weight: 600; letter-spacing: 0; }
+h2 { border-bottom: none; }
+code, pre, kbd, samp { font-size: 0.78em; }
+blockquote { font-style: italic; }

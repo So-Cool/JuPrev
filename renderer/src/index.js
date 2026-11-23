@@ -1,9 +1,9 @@
 // Entry point: exposes NBRender.renderNotebook(json, optionsJSON) -> resultJSON.
 // Runs in a bare JavaScriptCore context (no DOM, no window).
 import hljs from "highlight.js/lib/common";
-import { renderMarkdown, resetMacros } from "./markdown.js";
+import { collectedHeadings, renderMarkdown, resetHeadings, resetMacros } from "./markdown.js";
 import { createOutputRenderer } from "./outputs.js";
-import { setAttachments, setRemoteImages } from "./images.js";
+import { blockedImages, resetBlockedImages, setAttachments, setRemoteImages } from "./images.js";
 import { escapeHtml, joinSource } from "./util.js";
 
 function highlight(code, lang) {
@@ -13,14 +13,10 @@ function highlight(code, lang) {
   return escapeHtml(code);
 }
 
-function notebookTitle(nb, cells) {
+/** metadata.title, else the first level-1 heading (as markdown-it parsed it, so code is ignored). */
+function notebookTitle(nb, headings) {
   if (typeof nb.metadata?.title === "string" && nb.metadata.title) return nb.metadata.title;
-  for (const cell of cells) {
-    if (cell.cell_type !== "markdown") continue;
-    const m = /^\s{0,3}#\s+(.+?)\s*#*\s*$/m.exec(joinSource(cell.source));
-    if (m) return m[1];
-  }
-  return null;
+  return headings.find((h) => h.level === 1)?.text ?? null;
 }
 
 /** Errors with a `code` are reported to Swift as typed failures rather than generic exceptions. */
@@ -46,7 +42,9 @@ export function renderNotebook(jsonText, optionsJSON) {
     nb.metadata?.language_info?.name || nb.metadata?.kernelspec?.language || "python";
   const outputs = createOutputRenderer({ allowScripts: !!options.allowScripts });
   resetMacros();
+  resetHeadings();
   setRemoteImages(options.remoteImages);
+  resetBlockedImages();
 
   const html = nb.cells
     .map((cell) => {
@@ -55,7 +53,7 @@ export function renderNotebook(jsonText, optionsJSON) {
         case "markdown":
           setAttachments(cell.attachments);
           try {
-            return `<section class="cell markdown">${renderMarkdown(src)}</section>`;
+            return `<section class="cell markdown">${renderMarkdown(src, { collectHeadings: true })}</section>`;
           } finally {
             setAttachments(null);
           }
@@ -78,9 +76,11 @@ export function renderNotebook(jsonText, optionsJSON) {
 
   return JSON.stringify({
     html,
-    title: notebookTitle(nb, nb.cells),
+    title: notebookTitle(nb, collectedHeadings()),
     language,
     cellCount: nb.cells.length,
     interactiveOutputs: outputs.interactiveOutputs,
+    headings: collectedHeadings(),
+    blockedImages: blockedImages(),
   });
 }

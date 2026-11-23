@@ -1,0 +1,46 @@
+/* Gruvbox Material Light (hard background, material foreground).
+   Colours from github.com/sainnhe/gruvbox-material (MIT), autoload/gruvbox_material.vim. */
+:root {
+  --text: #654735;
+  --text-muted: #7c6f64;
+  --background: #f9f5d7;
+  --rule: #f2e5bc;
+  --code-background: #f5edca;
+  --code-text: #654735;
+  --stderr-background: #f0ddc3;
+  --error-background: #f8e4c9;
+  --link: #945e80;
+  --placeholder-text: #928374;
+  --table-stripe: #f5edca;
+  --ansi-black: #a89984; --ansi-red: #c14a4a; --ansi-green: #6c782e; --ansi-yellow: #b47109;
+  --ansi-blue: #45707a; --ansi-magenta: #945e80; --ansi-cyan: #4c7a5d; --ansi-white: #654735;
+  color-scheme: light;
+}
+
+/* Markdown, as in gruvbox-material's markdownH1–H6, markdownCode, markdownLinkText, markdownBlockquote. */
+h1 { color: #c14a4a; }
+h2 { color: #c35e0a; }
+h3 { color: #b47109; }
+h4 { color: #6c782e; }
+h5 { color: #45707a; }
+h6 { color: #945e80; }
+:not(pre) > code { color: #6c782e; }
+blockquote { color: #928374; border-left-color: #ebdbb2; }
+html.finding ::selection { background: #6f8352; color: #f9f5d7; }
+::selection { background: #f2e5bc; }
+
+/* Code: gruvbox-material's syntax groups mapped onto highlight.js classes
+   (Keyword red, String green, Number/Boolean purple, Function green, Type/Builtin yellow,
+   Operator/Decorator orange, Identifier blue, Constant aqua, Comment grey1 italic). */
+.hljs { color: #654735; background: transparent; }
+.hljs-keyword, .hljs-doctag, .hljs-template-tag, .hljs-variable.language_, .hljs-meta .hljs-keyword, .hljs-name, .hljs-selector-tag, .hljs-deletion { color: #c14a4a; }
+.hljs-string, .hljs-meta .hljs-string, .hljs-title.function_, .hljs-addition, .hljs-code { color: #6c782e; }
+.hljs-number, .hljs-literal, .hljs-link, .hljs-formula { color: #945e80; }
+.hljs-type, .hljs-built_in, .hljs-title, .hljs-title.class_, .hljs-title.class_.inherited__, .hljs-selector-class, .hljs-selector-id { color: #b47109; }
+.hljs-operator, .hljs-meta, .hljs-section, .hljs-bullet, .hljs-selector-pseudo { color: #c35e0a; }
+.hljs-variable, .hljs-template-variable, .hljs-attr, .hljs-attribute, .hljs-selector-attr { color: #45707a; }
+.hljs-symbol, .hljs-regexp { color: #4c7a5d; }
+.hljs-comment, .hljs-quote { color: #928374; font-style: italic; }
+.hljs-subst, .hljs-params, .hljs-punctuation, .hljs-property { color: #654735; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: bold; }

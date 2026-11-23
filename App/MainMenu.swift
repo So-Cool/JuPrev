@@ -56,6 +56,12 @@ enum MainMenu {
         menu.addItem(submenu(recent))
         menu.addItem(.separator())
         menu.addItem(item("Close", #selector(NSWindow.performClose(_:)), "w"))
+        menu.addItem(.separator())
+        menu.addItem(item("Export as HTML…", #selector(NotebookWindowController.exportHTML(_:)), "e", [.command, .shift]))
+        menu.addItem(item("Export as PDF…", #selector(NotebookWindowController.exportPDF(_:)), "e", [.command, .option]))
+        menu.addItem(.separator())
+        menu.addItem(item("Page Setup…", #selector(NSApplication.runPageLayout(_:)), "p", [.command, .shift]))
+        menu.addItem(item("Print…", #selector(NotebookWindowController.printNotebook(_:)), "p"))
         return menu
     }
 
@@ -63,12 +69,44 @@ enum MainMenu {
         let menu = NSMenu(title: "Edit")
         menu.addItem(item("Copy", #selector(NSText.copy(_:)), "c"))
         menu.addItem(item("Select All", #selector(NSText.selectAll(_:)), "a"))
+        menu.addItem(.separator())
+        menu.addItem(submenu(findMenu()))
+        return menu
+    }
+
+    private static func findMenu() -> NSMenu {
+        let menu = NSMenu(title: "Find")
+        let finder = #selector(NotebookWindowController.findInNotebook(_:))
+        let entries: [(String, String, NSEvent.ModifierFlags, NSTextFinder.Action)] = [
+            ("Find…", "f", .command, .showFindInterface),
+            ("Find Next", "g", .command, .nextMatch),
+            ("Find Previous", "g", [.command, .shift], .previousMatch),
+            ("Use Selection for Find", "e", .command, .setSearchString),
+        ]
+        for (title, key, modifiers, action) in entries {
+            let entry = item(title, finder, key, modifiers)
+            entry.tag = action.rawValue
+            menu.addItem(entry)
+        }
         return menu
     }
 
     private static func viewMenu() -> NSMenu {
         let menu = NSMenu(title: "View")
         menu.addItem(item("Reload", #selector(NotebookWindowController.reloadNotebook(_:)), "r"))
+        menu.addItem(.separator())
+        menu.addItem(item("Show Outline", #selector(NotebookWindowController.toggleOutline(_:)), "s", [.command, .control]))
+        menu.addItem(.separator())
+        menu.addItem(item("Load Images from Parent Folders", #selector(NotebookWindowController.loadParentFolderImages(_:))))
+        menu.addItem(item("Load Remote Images", #selector(NotebookWindowController.loadRemoteImages(_:))))
+        menu.addItem(.separator())
+        let themes = NSMenu(title: "Theme")
+        themes.delegate = ThemeMenu.shared
+        menu.addItem(submenu(themes))
+        menu.addItem(.separator())
+        menu.addItem(item("Show Code", #selector(NotebookWindowController.toggleCode(_:)), "c", [.command, .option]))
+        menu.addItem(item("Show Outputs", #selector(NotebookWindowController.toggleOutputs(_:)), "o", [.command, .option]))
+        menu.addItem(item("Show stderr", #selector(NotebookWindowController.toggleStderr(_:)), "l", [.command, .option]))
         menu.addItem(.separator())
         menu.addItem(item("Actual Size", #selector(NotebookWindowController.actualSize(_:)), "0"))
         menu.addItem(item("Zoom In", #selector(NotebookWindowController.zoomIn(_:)), "+"))

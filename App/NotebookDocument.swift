@@ -1,14 +1,46 @@
 import AppKit
 import NotebookKit
 
-/// A read-only notebook. JuPrev is a viewer: documents are never edited or saved.
+/// A read-only notebook. JuPrev is a viewer: documents are never edited or saved,
+/// but they follow changes made to the file by other apps (live reload).
 final class NotebookDocument: NSDocument {
-    private(set) var contents = Data()
+    static let contentsDidChange = Notification.Name("NotebookDocumentContentsDidChange")
+
+    private(set) var contents = Data() {
+        didSet {
+            if contents != oldValue { NotificationCenter.default.post(name: Self.contentsDidChange, object: self) }
+        }
+    }
+
+    private var watcher: FileWatcher?
 
     override class var autosavesInPlace: Bool { false }
 
     override func read(from data: Data, ofType typeName: String) throws {
         contents = data
+    }
+
+    override var fileURL: URL? {
+        didSet { startWatching() }
+    }
+
+    private func startWatching() {
+        guard let url = fileURL else {
+            watcher = nil
+            return
+        }
+        watcher = FileWatcher(url: url) { [weak self] in self?.reloadFromDisk() }
+    }
+
+    /// Keeps showing the last good contents if the file is gone or mid-write.
+    private func reloadFromDisk() {
+        guard let url = fileURL, let data = try? Data(contentsOf: url), !data.isEmpty else { return }
+        contents = data
+    }
+
+    override func close() {
+        watcher = nil
+        super.close()
     }
 
     override func data(ofType typeName: String) throws -> Data {

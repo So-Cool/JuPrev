@@ -11,10 +11,22 @@ public struct JuPrevSettings: Codable, Equatable, Sendable {
     public var trustParentFolders = false
     /// Load `https://` images in the app. Quick Look never loads anything from the network.
     public var loadRemoteImages = false
+    /// Defaults for Quick Look and new windows; each window can toggle its own.
+    public var showCode = true
+    public var showOutputs = true
+    /// Stream output written to stderr (warnings, progress bars, logs). Tracebacks are
+    /// error outputs, not stderr, so they stay visible.
+    public var showStderr = true
+    /// A `Theme` id: "default", a bundled theme, or "custom:<file>.css".
+    public var theme = Theme.defaultID
 
-    public init(trustParentFolders: Bool = false, loadRemoteImages: Bool = false) {
+    public init(trustParentFolders: Bool = false, loadRemoteImages: Bool = false, showCode: Bool = true, showOutputs: Bool = true, showStderr: Bool = true, theme: String = Theme.defaultID) {
         self.trustParentFolders = trustParentFolders
         self.loadRemoteImages = loadRemoteImages
+        self.showCode = showCode
+        self.showOutputs = showOutputs
+        self.showStderr = showStderr
+        self.theme = theme
     }
 
     public var localImagePolicy: LocalImagePolicy {
@@ -55,5 +67,9 @@ public struct JuPrevSettings: Codable, Equatable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         trustParentFolders = try c.decodeIfPresent(Bool.self, forKey: .trustParentFolders) ?? false
         loadRemoteImages = try c.decodeIfPresent(Bool.self, forKey: .loadRemoteImages) ?? false
+        showCode = try c.decodeIfPresent(Bool.self, forKey: .showCode) ?? true
+        showOutputs = try c.decodeIfPresent(Bool.self, forKey: .showOutputs) ?? true
+        showStderr = try c.decodeIfPresent(Bool.self, forKey: .showStderr) ?? true
+        theme = try c.decodeIfPresent(String.self, forKey: .theme) ?? Theme.defaultID
     }
 }

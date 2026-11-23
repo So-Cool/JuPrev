@@ -2,7 +2,7 @@ name: Test
 
 on:
   push:
-    branches: [master, dev]
+    branches: [master]
   pull_request:
 
 concurrency:
@@ -26,7 +26,13 @@ jobs:
         run: |
           npm ci
           npm run build
-          git diff --exit-code --stat -- ../Sources/NotebookKit/Resources ../ACKNOWLEDGEMENTS.md ../App/Credits.html
+          # Catch different, added or removed files (e.g., a new theme).
+          changes=$(git status --porcelain -- ../Sources/NotebookKit/Resources ../ACKNOWLEDGEMENTS.md ../App/Credits.html)
+          if [ -n "$changes" ]; then
+            echo "Committed renderer outputs differ from a fresh build (run npm run build in renderer/):"
+            echo "$changes"
+            exit 1
+          fi
 
       - name: Test NotebookKit
         run: swift test

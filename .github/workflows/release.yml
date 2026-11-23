@@ -1,6 +1,6 @@
 name: Release
 
-# Pushing a tag like v1.2.3 builds the app, publishes it as a GitHub release
+# Pushing a tag like v1.2 builds the app, publishes it as a GitHub release
 # and, if the TAP_GITHUB_TOKEN secret is set, updates the Homebrew cask in
 # So-Cool/homebrew-tap.
 on:

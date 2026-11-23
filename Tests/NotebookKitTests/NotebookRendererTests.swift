@@ -68,6 +68,24 @@ struct NotebookRendererTests {
         #expect(html.components(separatedBy: "katex-error").count == 2, "only the deliberately broken expression fails")
     }
 
+    @Test func headingsGetJupyterIdsAndFormTheOutline() throws {
+        let nb = #"""
+        {"nbformat": 4, "metadata": {}, "cells": [
+          {"cell_type": "markdown", "metadata": {}, "source": "# Intro\n## The $\\alpha$ parameter\n## Intro"},
+          {"cell_type": "code", "metadata": {}, "source": "", "outputs": [
+            {"output_type": "display_data", "data": {"text/markdown": "# Not in outline"}}]}
+        ]}
+        """#
+        let result = try Self.renderer.render(data: Data(nb.utf8), notebookFolder: nil)
+        #expect(result.headings == [
+            NotebookHeading(level: 1, text: "Intro", id: "Intro"),
+            NotebookHeading(level: 2, text: #"The \alpha parameter"#, id: #"The-\alpha-parameter"#),
+            NotebookHeading(level: 2, text: "Intro", id: "Intro-1"),
+        ])
+        #expect(result.bodyHTML.contains(#"<h1 id="Intro">"#))
+        #expect(result.bodyHTML.contains(#"<h1 id="Not-in-outline">"#), "output headings get ids but stay out of the outline")
+    }
+
     @Test func titleComesFromFirstHeading() throws {
         #expect(try render("markdown-math.ipynb").title == "Markdown and math")
         #expect(try render("outputs.ipynb").title == "outputs", "falls back to the file name")
@@ -115,10 +133,19 @@ struct NotebookRendererTests {
 
     @Test func staticPagesForbidScriptsAndNetwork() throws {
         let html = try render("outputs.ipynb").html
-        #expect(html.contains(#"<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'">"#))
+        #expect(html.contains(#"<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">"#))
         #expect(!html.contains("script-src"))
         #expect(html.contains("<title>outputs</title>"))
         #expect(html.contains("@font-face"), "KaTeX fonts are inlined")
+    }
+
+    @Test func hiddenPartsAreClassesOnTheRoot() throws {
+        #expect(try render("outputs.ipynb").html.contains(#"<html class="">"#))
+        let hidden = try render("outputs.ipynb", RenderOptions(showCode: false, showOutputs: false, showStderr: false)).html
+        #expect(hidden.contains(#"<html class="hide-code hide-outputs hide-stderr">"#))
+        #expect(try render("outputs.ipynb", RenderOptions(showStderr: false)).html.contains(#"<html class="hide-stderr">"#))
+        #expect(NotebookRenderer.stylesheet.contains("html.hide-stderr .output-stream.stderr"))
+        #expect(NotebookRenderer.stylesheet.contains("html.hide-code .cell.code .input"))
     }
 
     // MARK: Images
@@ -164,10 +191,88 @@ struct NotebookRendererTests {
         #expect(!html.contains(#""onerror=""#))
     }
 
+    @Test func blockedImagesAreCountedByReason() throws {
+        let strict = try render("images/nb/images.ipynb")
+        #expect(strict.blockedImages == BlockedImages(parentFolders: 1, remote: 1))
+        let open = try render("images/nb/images.ipynb", RenderOptions(localImages: .trustParentFolders, remoteImages: true))
+        #expect(open.blockedImages == BlockedImages())
+        #expect(RenderOptions(settings: JuPrevSettings(), localImages: .trustParentFolders).localImages == .trustParentFolders,
+                "a window's one-off choice overrides the setting")
+    }
+
+    @Test func plainHTTPImagesNeverLoad() throws {
+        let html = try render(cells: #"{"cell_type": "markdown", "metadata": {}, "source": "![a](http://example.com/a.png)"}"#,
+                              RenderOptions(remoteImages: true))
+        #expect(html.bodyHTML.contains(#"data-reason="insecureRemote""#))
+        #expect(html.blockedImages.remote == 0, "loading remote images once wouldn't help, so it isn't offered")
+    }
+
     @Test func noNotebookFolderMeansNoLocalImages() throws {
         let data = try Data(contentsOf: fixtures.appendingPathComponent("images/nb/images.ipynb"))
         let html = try Self.renderer.render(data: data, notebookFolder: nil).bodyHTML
         #expect(html.contains(#"data-reason="disabled""#))
+    }
+
+    // MARK: Hardening (found in review)
+
+    func render(cells: String, _ options: RenderOptions = RenderOptions()) throws -> RenderedNotebook {
+        let nb = #"{"nbformat": 4, "metadata": {}, "cells": ["# + cells + #"]}"#
+        return try Self.renderer.render(data: Data(nb.utf8), notebookFolder: nil, options: options)
+    }
+
+    @Test func pageLevelTagsCantRedirectOrRetarget() throws {
+        let markdown = try render(cells: #"{"cell_type": "markdown", "metadata": {}, "source": "<meta http-equiv=\"refresh\" content=\"0;url=https://e.com\"><base href=\"https://e/\">x"}"#)
+        #expect(!markdown.bodyHTML.lowercased().contains("<meta") && !markdown.bodyHTML.lowercased().contains("<base"))
+        let reassembled = try render(cells: #"{"cell_type": "code", "metadata": {}, "source": "", "outputs": [{"output_type": "display_data", "data": {"text/html": "<met<meta>a http-equiv=\"refresh\" content=\"0\">"}}]}"#)
+        #expect(!reassembled.bodyHTML.lowercased().contains("<meta"))
+        #expect(markdown.html.contains("base-uri 'none'"))
+    }
+
+    @Test func badAttachmentsLoseOnlyTheirImage() throws {
+        let malformed = try render(cells: #"{"cell_type": "markdown", "metadata": {}, "source": "![x](attachment:%E0%A4%A) ok"}"#)
+        #expect(malformed.bodyHTML.contains("ok"))
+        let notAString = try render(cells: #"{"cell_type": "markdown", "metadata": {}, "source": "![x](attachment:a.png)", "attachments": {"a.png": {"image/png": 5}}}"#)
+        #expect(notAString.bodyHTML.contains(#"data-reason="unreadable""#))
+    }
+
+    @Test func titlesComeFromRealLevelOneHeadings() throws {
+        #expect(try render(cells: ##"{"cell_type": "markdown", "metadata": {}, "source": "# Learn C#"}"##).title == "Learn C#")
+        #expect(try render(cells: #"{"cell_type": "markdown", "metadata": {}, "source": "```bash\n# install deps\n```\n## Sub\n# **Real** Title"}"#).title == "Real Title")
+    }
+
+    @Test func headingIdsStayUnique() throws {
+        let ids = try render(cells: ##"{"cell_type": "markdown", "metadata": {}, "source": "# A\n# A\n# A-1"}"##).headings.map(\.id)
+        #expect(ids == ["A", "A-1", "A-1-1"])
+    }
+
+    @Test func codeInListItemsIsNotMath() throws {
+        let html = try render(cells: #"{"cell_type": "markdown", "metadata": {}, "source": "- item\n\n  ```\n  $a$\n  ```"}"#).bodyHTML
+        #expect(!html.contains("katex"))
+    }
+
+    @Test func nonColourEscapesAreDropped() throws {
+        let html = try render(cells: #"{"cell_type": "code", "metadata": {}, "source": "", "outputs": [{"output_type": "stream", "name": "stderr", "text": "a\u001b[Kb\u001b[31mred"}]}"#).bodyHTML
+        #expect(html.contains(#"ab<span class="ansi-red-fg">red</span>"#))
+        #expect(!html.contains("\u{1B}"))
+    }
+
+    @Test func byteOrderMarkIsAccepted() throws {
+        let data = Data([0xEF, 0xBB, 0xBF]) + Data(#"{"nbformat": 4, "metadata": {}, "cells": []}"#.utf8)
+        #expect(try Self.renderer.render(data: data, notebookFolder: nil).cellCount == 0)
+    }
+
+    @Test func slashSeparatedHandlersCountAsInteractive() throws {
+        let result = try render(cells: #"{"cell_type": "code", "metadata": {}, "source": "", "outputs": [{"output_type": "display_data", "data": {"text/html": "<img/src=x/onerror=alert(1)>"}}]}"#)
+        #expect(result.interactiveOutputs == 1)
+    }
+
+    @Test func scriptsModeAllowsFramesAndStylesheets() throws {
+        let result = try render(
+            cells: #"{"cell_type": "code", "metadata": {}, "source": "", "outputs": [{"output_type": "display_data", "data": {"text/html": "<link rel=stylesheet href=https://x/y.css><script>1</script>"}}]}"#,
+            RenderOptions(allowScripts: true)
+        )
+        #expect(result.bodyHTML.contains("<link rel=stylesheet"))
+        #expect(result.html.contains("frame-src data: blob: https:"))
     }
 
     // MARK: Errors
@@ -205,7 +310,14 @@ struct SettingsTests {
         try JuPrevSettings(trustParentFolders: true).save(to: url)
         #expect(JuPrevSettings.load(from: url).trustParentFolders)
         #expect(!JuPrevSettings.load(from: url).loadRemoteImages)
+        #expect(JuPrevSettings.load(from: url).showCode, "missing keys keep their defaults")
+        #expect(JuPrevSettings.load(from: url).showStderr)
+        #expect(JuPrevSettings.load(from: url).theme == "default")
         #expect(JuPrevSettings.load(from: url).localImagePolicy == .trustParentFolders)
+
+        try JuPrevSettings(showCode: false).save(to: url)
+        #expect(RenderOptions(settings: .load(from: url)).showCode == false)
+        #expect(RenderOptions(settings: .load(from: url), showCode: true).showCode, "a window's choice wins")
 
         try Data(#"{"trustParentFolders": true, "fromTheFuture": 1}"#.utf8).write(to: url)
         #expect(JuPrevSettings.load(from: url).trustParentFolders, "unknown keys are ignored")
@@ -265,6 +377,12 @@ struct NotebookSummaryTests {
         #expect(throws: (any Error).self) { try NotebookSummary(data: Data()) }
     }
 
+    @Test func privateUseCharactersDontCrash() throws {
+        let nb = ##"{"nbformat": 4, "metadata": {}, "cells": [{"cell_type": "markdown", "source": "# T\nicon \ue000M7\ue001 here"}]}"##
+        let s = try NotebookSummary(data: Data(nb.utf8))
+        #expect(s.lines.first?.contains("here") == true)
+    }
+
     @Test func plainTextStripsMarkup() {
         #expect(NotebookSummary.plainText("- see [the docs](https://x.y) and **bold** `code`") == "see the docs and bold code")
         #expect(NotebookSummary.plainText("| a | b |") == "")
@@ -280,5 +398,45 @@ struct NotebookSummaryTests {
         #expect(NotebookSummary.heading("## C# tips") == "C# tips")
         #expect(NotebookSummary.heading("#hashtag") == nil)
         #expect(NotebookSummary.heading("plain") == nil)
+    }
+}
+
+struct ThemeTests {
+    let folder: URL
+
+    init() throws {
+        folder = FileManager.default.temporaryDirectory.appendingPathComponent("juprev-themes-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data("body { color: teal; }".utf8).write(to: folder.appendingPathComponent("Ocean.css"))
+        try Data("ignored".utf8).write(to: folder.appendingPathComponent("notes.txt"))
+    }
+
+    @Test func listsDefaultBundledThenCustom() {
+        let ids = Themes.available(customFolder: folder).map(\.id)
+        #expect(ids == ["default", "serif", "compact", "gruvbox-dark", "gruvbox-light", "custom:Ocean.css"])
+    }
+
+    @Test func loadsThemeCSS() {
+        #expect(Themes.css(for: "default", customFolder: folder) == nil)
+        #expect(Themes.css(for: "serif", customFolder: folder)?.contains("Iowan Old Style") == true)
+        #expect(Themes.css(for: "gruvbox-dark", customFolder: folder)?.contains("--background: #1d2021") == true)
+        #expect(Themes.css(for: "gruvbox-light", customFolder: folder)?.contains("--background: #f9f5d7") == true)
+        #expect(Themes.css(for: "custom:Ocean.css", customFolder: folder) == "body { color: teal; }")
+    }
+
+    @Test func unknownOrUnsafeThemesFallBackToDefault() {
+        #expect(Themes.css(for: "nope", customFolder: folder) == nil)
+        #expect(Themes.css(for: "custom:Missing.css", customFolder: folder) == nil)
+        #expect(Themes.css(for: "custom:../settings.json", customFolder: folder) == nil)
+    }
+
+    @Test func themeCSSFollowsTheBaseStylesheet() throws {
+        let page = try NotebookRenderer().render(
+            fileURL: fixtures.appendingPathComponent("outputs.ipynb"),
+            options: RenderOptions(themeCSS: "body { color: teal; }")
+        ).html
+        let base = try #require(page.range(of: "html.hide-code"))
+        let theme = try #require(page.range(of: #"<style id="theme">body { color: teal; }</style>"#))
+        #expect(base.lowerBound < theme.lowerBound)
     }
 }
