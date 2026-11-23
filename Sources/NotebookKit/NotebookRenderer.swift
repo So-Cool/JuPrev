@@ -11,19 +11,23 @@ public struct RenderOptions: Equatable, Sendable {
     /// Hide code cells' source / outputs (CSS classes on <html>, so they can be toggled live).
     public var showCode: Bool
     public var showOutputs: Bool
+    /// Extra CSS applied after the base stylesheet (see `Themes`).
+    public var themeCSS: String?
 
     public init(
         localImages: LocalImagePolicy = .notebookFolder,
         remoteImages: Bool = false,
         allowScripts: Bool = false,
         showCode: Bool = true,
-        showOutputs: Bool = true
+        showOutputs: Bool = true,
+        themeCSS: String? = nil
     ) {
         self.localImages = localImages
         self.remoteImages = remoteImages
         self.allowScripts = allowScripts
         self.showCode = showCode
         self.showOutputs = showOutputs
+        self.themeCSS = themeCSS
     }
 
     /// Options from the shared settings; the app overrides what a window has toggled.
@@ -34,7 +38,8 @@ public struct RenderOptions: Equatable, Sendable {
             remoteImages: remoteImages ?? settings.loadRemoteImages,
             allowScripts: allowScripts,
             showCode: showCode ?? settings.showCode,
-            showOutputs: showOutputs ?? settings.showOutputs
+            showOutputs: showOutputs ?? settings.showOutputs,
+            themeCSS: Themes.css(for: settings.theme)
         )
     }
 }

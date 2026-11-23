@@ -1,0 +1,11 @@
+/* Compact: smaller type and a wider column, for dense notebooks. */
+body { font-size: 14px; line-height: 1.45; }
+.notebook { max-width: 64em; padding: 1.5em 1.5em 3em; }
+.cell { margin-bottom: 0.75em; }
+h1 { font-size: 1.6em; }
+h2 { font-size: 1.3em; }
+h3 { font-size: 1.1em; }
+h1, h2, h3, h4, h5, h6 { margin: 1.2em 0 0.4em; }
+p, ul, ol, blockquote, table, pre { margin-bottom: 0.7em; }
+pre.source { padding: 0.55em 0.85em; border-radius: 6px; }
+.outputs { margin-top: 0.4em; }

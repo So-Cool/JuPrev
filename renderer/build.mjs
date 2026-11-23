@@ -1,10 +1,11 @@
 // Builds the renderer into NotebookKit's resources:
 //   render.js — IIFE exposing globalThis.NBRender, for JavaScriptCore
 //   style.css — KaTeX (fonts inlined as woff2 data URIs), highlight.js themes, notebook theme
+//   themes/   — the bundled themes from styles/themes
 // and the licence notices for every npm package that ends up in them:
 //   ACKNOWLEDGEMENTS.md (repository root) and App/Credits.html (the About window)
 import { build } from "esbuild";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -44,6 +45,13 @@ const css = [
 ].join("\n");
 
 writeFileSync(join(outDir, "style.css"), css);
+
+// Bundled themes: applied after style.css (see NotebookKit/Themes.swift).
+const themesDir = join(here, "styles/themes");
+mkdirSync(join(outDir, "themes"), { recursive: true });
+for (const file of readdirSync(themesDir).filter((f) => f.endsWith(".css"))) {
+  copyFileSync(join(themesDir, file), join(outDir, "themes", file));
+}
 console.log(`render.js and style.css (${(css.length / 1024).toFixed(0)} KB) written to ${outDir}`);
 
 // Licence notices for the bundled packages (katex is also in style.css, with its fonts).

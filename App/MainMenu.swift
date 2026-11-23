@@ -97,6 +97,10 @@ enum MainMenu {
         menu.addItem(.separator())
         menu.addItem(item("Show Outline", #selector(NotebookWindowController.toggleOutline(_:)), "s", [.command, .control]))
         menu.addItem(.separator())
+        let themes = NSMenu(title: "Theme")
+        themes.delegate = ThemeMenu.shared
+        menu.addItem(submenu(themes))
+        menu.addItem(.separator())
         menu.addItem(item("Show Code", #selector(NotebookWindowController.toggleCode(_:)), "c", [.command, .option]))
         menu.addItem(item("Show Outputs", #selector(NotebookWindowController.toggleOutputs(_:)), "o", [.command, .option]))
         menu.addItem(.separator())

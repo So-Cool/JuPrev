@@ -11,6 +11,7 @@ options:
   --trust-parent-folders    let markdown images use ../ paths outside the notebook's folder
   --no-local-images         don't read any local image files
   --allow-scripts           keep interactive outputs and allow scripts (CSP relaxed)
+  --theme <id>              default, serif, compact or custom:<file>.css
   --body-only               print only the cells' HTML fragment
   --time                    print timing to stderr
 
@@ -45,6 +46,13 @@ while !args.isEmpty {
     case "--trust-parent-folders": options.localImages = .trustParentFolders
     case "--no-local-images": options.localImages = .disabled
     case "--allow-scripts": options.allowScripts = true
+    case "--theme":
+        guard !args.isEmpty else { fail("--theme needs a theme id", code: 64) }
+        let id = args.removeFirst()
+        guard Themes.available().contains(where: { $0.id == id }) else {
+            fail("unknown theme \(id); available: \(Themes.available().map(\.id).joined(separator: ", "))", code: 64)
+        }
+        options.themeCSS = Themes.css(for: id)
     case "--body-only": bodyOnly = true
     case "--time": showTime = true
     case "-h", "--help":

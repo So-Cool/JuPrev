@@ -29,7 +29,7 @@ enum PageTemplate {
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="color-scheme" content="light dark">
         <title>\(escape(title))</title>
-        <style>\(NotebookRenderer.stylesheet)</style>
+        <style>\(NotebookRenderer.stylesheet)</style>\(options.themeCSS.map { "\n<style id=\"theme\">\($0)</style>" } ?? "")
         </head>
         <body>
         <main class="notebook">

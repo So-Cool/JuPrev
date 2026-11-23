@@ -12,11 +12,23 @@ final class SettingsViewController: NSHostingController<SettingsView> {
 /// Edits the settings file shared with the Quick Look extension.
 struct SettingsView: View {
     @State private var settings = JuPrevSettings.load()
+    @State private var themes = Themes.available()
     @State private var saveError: String?
 
     var body: some View {
         Form {
             Section("Notebook") {
+                Picker("Theme", selection: $settings.theme) {
+                    ForEach(themes, id: \.id) { theme in
+                        Text(theme.name).tag(theme.id)
+                    }
+                }
+                LabeledContent {
+                    Button("Open Themes Folder") { ThemeMenu.openThemesFolder() }
+                } label: {
+                    Text("Custom themes")
+                    Text("CSS files in this folder appear as themes. After editing one, View ▸ Reload (⌘R) applies it.")
+                }
                 Toggle("Show code", isOn: $settings.showCode)
                 Toggle(isOn: $settings.showOutputs) {
                     Text("Show outputs")
@@ -40,7 +52,16 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 480)
         .fixedSize()
+        // The View ▸ Theme menu changes settings too; pick that up.
+        .onReceive(NotificationCenter.default.publisher(for: .juprevSettingsDidChange)) { _ in
+            let saved = JuPrevSettings.load()
+            if saved != settings { settings = saved }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            themes = Themes.available()
+        }
         .onChange(of: settings) { _, newValue in
+            guard newValue != JuPrevSettings.load() else { return }
             do {
                 try newValue.save()
                 saveError = nil

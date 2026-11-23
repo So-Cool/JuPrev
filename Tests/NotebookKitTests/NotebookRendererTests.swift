@@ -231,6 +231,7 @@ struct SettingsTests {
         #expect(JuPrevSettings.load(from: url).trustParentFolders)
         #expect(!JuPrevSettings.load(from: url).loadRemoteImages)
         #expect(JuPrevSettings.load(from: url).showCode, "missing keys keep their defaults")
+        #expect(JuPrevSettings.load(from: url).theme == "default")
         #expect(JuPrevSettings.load(from: url).localImagePolicy == .trustParentFolders)
 
         try JuPrevSettings(showCode: false).save(to: url)
@@ -310,5 +311,43 @@ struct NotebookSummaryTests {
         #expect(NotebookSummary.heading("## C# tips") == "C# tips")
         #expect(NotebookSummary.heading("#hashtag") == nil)
         #expect(NotebookSummary.heading("plain") == nil)
+    }
+}
+
+struct ThemeTests {
+    let folder: URL
+
+    init() throws {
+        folder = FileManager.default.temporaryDirectory.appendingPathComponent("juprev-themes-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data("body { color: teal; }".utf8).write(to: folder.appendingPathComponent("Ocean.css"))
+        try Data("ignored".utf8).write(to: folder.appendingPathComponent("notes.txt"))
+    }
+
+    @Test func listsDefaultBundledThenCustom() {
+        let ids = Themes.available(customFolder: folder).map(\.id)
+        #expect(ids == ["default", "serif", "compact", "custom:Ocean.css"])
+    }
+
+    @Test func loadsThemeCSS() {
+        #expect(Themes.css(for: "default", customFolder: folder) == nil)
+        #expect(Themes.css(for: "serif", customFolder: folder)?.contains("Iowan Old Style") == true)
+        #expect(Themes.css(for: "custom:Ocean.css", customFolder: folder) == "body { color: teal; }")
+    }
+
+    @Test func unknownOrUnsafeThemesFallBackToDefault() {
+        #expect(Themes.css(for: "nope", customFolder: folder) == nil)
+        #expect(Themes.css(for: "custom:Missing.css", customFolder: folder) == nil)
+        #expect(Themes.css(for: "custom:../settings.json", customFolder: folder) == nil)
+    }
+
+    @Test func themeCSSFollowsTheBaseStylesheet() throws {
+        let page = try NotebookRenderer().render(
+            fileURL: fixtures.appendingPathComponent("outputs.ipynb"),
+            options: RenderOptions(themeCSS: "body { color: teal; }")
+        ).html
+        let base = try #require(page.range(of: "html.hide-code"))
+        let theme = try #require(page.range(of: #"<style id="theme">body { color: teal; }</style>"#))
+        #expect(base.lowerBound < theme.lowerBound)
     }
 }

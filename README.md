@@ -9,8 +9,10 @@ Jupyter or an editor.
   code and outputs (text, tables, images, plots, tracebacks) in light and dark
   mode.
 - **Finder thumbnails**: the notebook's title, opening text and first plot.
-- **Viewer app**: one quiet window per notebook, or a tabbed layout, with zoom
-  and Open Recent.
+- **Viewer app**: one quiet window per notebook, or a tabbed layout, that
+  reloads live when the notebook changes on disk (keeping your place), with an
+  outline sidebar, find, show/hide code and outputs, themes, zoom, and export to
+  HTML and PDF.
 - **Self-contained**: no Python, Jupyter or network connection needed.
   Notebooks are plain JSON, rendered by a bundled JavaScript renderer.
 
@@ -69,8 +71,44 @@ Homebrew prints this reminder too.
   JuPrev doesn't take over double-click from your current notebook app;
   to make it the default, use Get Info ▸ Open with ▸ Change All.
 - **Settings** (JuPrev ▸ Settings…):
-  whether images may load from parent folders and from the web
-  (both off by default).
+  the theme, whether code and outputs are shown, and whether images may load
+  from parent folders and from the web (both off by default).
+  Theme and code/output choices apply to Quick Look too.
+
+| Shortcut | In the viewer |
+| -------- | ------------- |
+| ⌃⌘S      | Show/hide the outline (remembered for new windows) |
+| ⌘F, ⌘G, ⇧⌘G, ⌘E | Find, next/previous match, find the selection |
+| ⌥⌘C, ⌥⌘O | Show/hide code and outputs in this window (Settings sets the default) |
+| ⌘R       | Reload (the notebook also reloads by itself when it changes on disk) |
+| ⌘+, ⌘−, ⌘0 | Zoom |
+| ⇧⌘E, ⌥⌘E | Export as HTML (static, no scripts) or PDF |
+| ⌘P       | Print |
+
+### Themes
+
+View ▸ Theme (or Settings) picks *Default*, *Serif* or *Compact*.
+For your own, put `.css` files in the folder that **View ▸ Theme ▸ Open Themes
+Folder** opens (`~/Library/Application Support/JuPrev/Themes`); they're applied
+after the default style and are listed by file name.
+After editing one, View ▸ Reload (⌘R) applies it.
+The simplest themes override the colour variables, for light and dark mode:
+
+```css
+:root {
+  --text: #3b3a36; --background: #fdf6e3; --code-background: #f3ecd8;
+  --link: #b58900; --rule: #e6dfca; --text-muted: #93a1a1;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --text: #d6d2c4; --background: #1f2327; --code-background: #2a2f34; }
+}
+```
+
+Other variables: `--code-text`, `--stderr-background`, `--error-background`,
+`--placeholder-text`, `--table-stripe` and `--ansi-{black,red,green,yellow,blue,magenta,cyan,white}`.
+Typography and layout can be changed with ordinary CSS, e.g. `body { font-family: … }`
+or `.notebook { max-width: 50em; }`.
+Printing and PDF export always use the light colours.
 
 ## Privacy and security
 
@@ -104,12 +142,6 @@ the rules above decide which ones.
 - Thumbnails show raster plots (PNG, JPEG, GIF) only;
   notebooks whose plots are all SVG get a text-only thumbnail.
 - Math macros defined outside the notebook aren't known.
-
-## To do
-
-- [ ] Marked-style features:
-      live reload, an outline sidebar, show/hide code and outputs, themes,
-      HTML/PDF export.
 
 ## Develop
 

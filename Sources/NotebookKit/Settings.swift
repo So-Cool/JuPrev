@@ -14,12 +14,15 @@ public struct JuPrevSettings: Codable, Equatable, Sendable {
     /// Defaults for Quick Look and new windows; each window can toggle its own.
     public var showCode = true
     public var showOutputs = true
+    /// A `Theme` id: "default", a bundled theme, or "custom:<file>.css".
+    public var theme = Theme.defaultID
 
-    public init(trustParentFolders: Bool = false, loadRemoteImages: Bool = false, showCode: Bool = true, showOutputs: Bool = true) {
+    public init(trustParentFolders: Bool = false, loadRemoteImages: Bool = false, showCode: Bool = true, showOutputs: Bool = true, theme: String = Theme.defaultID) {
         self.trustParentFolders = trustParentFolders
         self.loadRemoteImages = loadRemoteImages
         self.showCode = showCode
         self.showOutputs = showOutputs
+        self.theme = theme
     }
 
     public var localImagePolicy: LocalImagePolicy {
@@ -62,5 +65,6 @@ public struct JuPrevSettings: Codable, Equatable, Sendable {
         loadRemoteImages = try c.decodeIfPresent(Bool.self, forKey: .loadRemoteImages) ?? false
         showCode = try c.decodeIfPresent(Bool.self, forKey: .showCode) ?? true
         showOutputs = try c.decodeIfPresent(Bool.self, forKey: .showOutputs) ?? true
+        theme = try c.decodeIfPresent(String.self, forKey: .theme) ?? Theme.defaultID
     }
 }
