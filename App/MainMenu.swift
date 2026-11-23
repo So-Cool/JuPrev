@@ -63,6 +63,25 @@ enum MainMenu {
         let menu = NSMenu(title: "Edit")
         menu.addItem(item("Copy", #selector(NSText.copy(_:)), "c"))
         menu.addItem(item("Select All", #selector(NSText.selectAll(_:)), "a"))
+        menu.addItem(.separator())
+        menu.addItem(submenu(findMenu()))
+        return menu
+    }
+
+    private static func findMenu() -> NSMenu {
+        let menu = NSMenu(title: "Find")
+        let finder = #selector(NotebookWindowController.findInNotebook(_:))
+        let entries: [(String, String, NSEvent.ModifierFlags, NSTextFinder.Action)] = [
+            ("Find…", "f", .command, .showFindInterface),
+            ("Find Next", "g", .command, .nextMatch),
+            ("Find Previous", "g", [.command, .shift], .previousMatch),
+            ("Use Selection for Find", "e", .command, .setSearchString),
+        ]
+        for (title, key, modifiers, action) in entries {
+            let entry = item(title, finder, key, modifiers)
+            entry.tag = action.rawValue
+            menu.addItem(entry)
+        }
         return menu
     }
 

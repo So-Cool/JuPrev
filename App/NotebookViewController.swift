@@ -9,6 +9,7 @@ private let logger = Logger(subsystem: "me.kcpr.juprev", category: "viewer")
 final class NotebookViewController: NSViewController {
     private weak var document: NotebookDocument?
     private let bar = InteractiveOutputsBar()
+    private let findBar = FindBar()
     private let webContainer = NSView()
     private var webView: WKWebView?
     private var webViewMode: NotebookWebView.Mode?
@@ -33,10 +34,16 @@ final class NotebookViewController: NSViewController {
         stack.spacing = 0
         stack.alignment = .width
         stack.addArrangedSubview(bar)
+        stack.addArrangedSubview(findBar)
         stack.addArrangedSubview(webContainer)
         webContainer.setContentHuggingPriority(.defaultLow, for: .vertical)
         bar.isHidden = true
         bar.onToggleScripts = { [weak self] in self?.toggleScripts() }
+        findBar.isHidden = true
+        findBar.onClose = { [weak self] in
+            guard let self, let webView = self.webView else { return }
+            self.view.window?.makeFirstResponder(webView)
+        }
         view = stack
         view.frame = NSRect(x: 0, y: 0, width: 900, height: 1000)
     }
@@ -108,6 +115,7 @@ final class NotebookViewController: NSViewController {
         webView.pageZoom = pageZoom
         webView.setValue(false, forKey: "drawsBackground") // no white flash in dark mode
         webContainer.addSubview(webView)
+        findBar.webView = webView
         self.webView = webView
         webViewMode = mode
         return webView
@@ -122,6 +130,23 @@ final class NotebookViewController: NSViewController {
         scriptsAllowed.toggle()
         reload(preservingScroll: true)
     }
+
+    // MARK: Find
+
+    /// Edit ▸ Find items carry NSTextFinder.Action values as tags.
+    func runFindAction(_ sender: Any?) {
+        guard let tag = (sender as? NSValidatedUserInterfaceItem)?.tag,
+              let action = NSTextFinder.Action(rawValue: tag) else { return }
+        switch action {
+        case .showFindInterface: findBar.show()
+        case .nextMatch: findBar.findNext()
+        case .previousMatch: findBar.findPrevious()
+        case .setSearchString: findBar.useSelection()
+        default: break
+        }
+    }
+
+    var canFind: Bool { webView != nil }
 
     // MARK: Zoom
 
@@ -145,6 +170,7 @@ extension NotebookViewController: WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        findBar.contentDidChange()
         guard let y = pendingScrollY else { return }
         pendingScrollY = nil
         webView.evaluateJavaScript("window.scrollTo(0, \(y))")

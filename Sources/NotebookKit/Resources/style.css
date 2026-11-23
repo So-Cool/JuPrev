@@ -222,6 +222,10 @@ pre.source code.hljs { padding: 0; background: transparent; font-size: inherit; 
 .ansi-italic { font-style: italic; }
 .ansi-underline { text-decoration: underline; }
 
+/* While the app's find bar is open (it sets this class), make the found text stand out:
+   focus is in the search field, so WebKit would otherwise draw it as a pale inactive selection. */
+html.finding ::selection { background: #ffd60a; color: #000; }
+
 /* Shown instead of a notebook that can't be rendered. */
 .render-error { margin-top: 4em; text-align: center; color: var(--text-muted); }
 .render-error h1 { font-size: 1.25em; color: var(--text); margin-bottom: 0.5em; }

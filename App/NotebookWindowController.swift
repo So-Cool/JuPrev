@@ -1,6 +1,6 @@
 import AppKit
 
-final class NotebookWindowController: NSWindowController {
+final class NotebookWindowController: NSWindowController, NSMenuItemValidation {
     private let notebookViewController: NotebookViewController
 
     init(document: NotebookDocument) {
@@ -24,9 +24,20 @@ final class NotebookWindowController: NSWindowController {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
+    func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        if item.action == #selector(findInNotebook(_:)) {
+            return notebookViewController.canFind
+        }
+        return true
+    }
+
     // MARK: View menu (sent up the responder chain from the window)
 
     @objc func reloadNotebook(_ sender: Any?) { notebookViewController.reload(preservingScroll: true) }
+
+    // Edit ▸ Find (tags are NSTextFinder.Action values). A selector of our own: with the
+    // standard performTextFinderAction(_:), WKWebView (first responder) takes the action.
+    @objc func findInNotebook(_ sender: Any?) { notebookViewController.runFindAction(sender) }
     @objc func actualSize(_ sender: Any?) { notebookViewController.zoom(to: 1) }
     @objc func zoomIn(_ sender: Any?) { notebookViewController.zoom(by: 1.1) }
     @objc func zoomOut(_ sender: Any?) { notebookViewController.zoom(by: 1 / 1.1) }
