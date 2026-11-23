@@ -1,0 +1,51 @@
+/* Gruvbox Material Dark (hard background, material foreground).
+   Colours from github.com/sainnhe/gruvbox-material (MIT), autoload/gruvbox_material.vim. */
+@media screen {
+  :root {
+    --text: #d4be98;
+    --text-muted: #a89984;
+    --background: #1d2021;
+    --rule: #3c3836;
+    --code-background: #282828;
+    --code-text: #d4be98;
+    --stderr-background: #442e2d;
+    --error-background: #3c1f1e;
+    --link: #d3869b;
+    --placeholder-text: #928374;
+    --table-stripe: #282828;
+    --ansi-black: #7c6f64; --ansi-red: #ea6962; --ansi-green: #a9b665; --ansi-yellow: #d8a657;
+    --ansi-blue: #7daea3; --ansi-magenta: #d3869b; --ansi-cyan: #89b482; --ansi-white: #d4be98;
+    color-scheme: dark;
+  }
+
+  /* Markdown, as in gruvbox-material's markdownH1–H6, markdownCode, markdownLinkText, markdownBlockquote. */
+  h1 { color: #ea6962; }
+  h2 { color: #e78a4e; }
+  h3 { color: #d8a657; }
+  h4 { color: #a9b665; }
+  h5 { color: #7daea3; }
+  h6 { color: #d3869b; }
+  :not(pre) > code { color: #a9b665; }
+  blockquote { color: #928374; border-left-color: #504945; }
+  html.finding ::selection { background: #a9b665; color: #1d2021; }
+  ::selection { background: #3c3836; }
+
+  /* Transparent plots usually assume a light page. */
+  .output-image img { background: #ddc7a1; border-radius: 4px; }
+
+  /* Code: gruvbox-material's syntax groups mapped onto highlight.js classes
+     (Keyword red, String green, Number/Boolean purple, Function green, Type/Builtin yellow,
+     Operator/Decorator orange, Identifier blue, Constant aqua, Comment grey1 italic). */
+  .hljs { color: #d4be98; background: transparent; }
+  .hljs-keyword, .hljs-doctag, .hljs-template-tag, .hljs-variable.language_, .hljs-meta .hljs-keyword, .hljs-name, .hljs-selector-tag, .hljs-deletion { color: #ea6962; }
+  .hljs-string, .hljs-meta .hljs-string, .hljs-title.function_, .hljs-addition, .hljs-code { color: #a9b665; }
+  .hljs-number, .hljs-literal, .hljs-link, .hljs-formula { color: #d3869b; }
+  .hljs-type, .hljs-built_in, .hljs-title, .hljs-title.class_, .hljs-title.class_.inherited__, .hljs-selector-class, .hljs-selector-id { color: #d8a657; }
+  .hljs-operator, .hljs-meta, .hljs-section, .hljs-bullet, .hljs-selector-pseudo { color: #e78a4e; }
+  .hljs-variable, .hljs-template-variable, .hljs-attr, .hljs-attribute, .hljs-selector-attr { color: #7daea3; }
+  .hljs-symbol, .hljs-regexp { color: #89b482; }
+  .hljs-comment, .hljs-quote { color: #928374; font-style: italic; }
+  .hljs-subst, .hljs-params, .hljs-punctuation, .hljs-property { color: #d4be98; }
+  .hljs-emphasis { font-style: italic; }
+  .hljs-strong { font-weight: bold; }
+}

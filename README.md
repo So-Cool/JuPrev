@@ -87,7 +87,9 @@ Homebrew prints this reminder too.
 
 ### Themes
 
-View ▸ Theme (or Settings) picks *Default*, *Serif* or *Compact*.
+View ▸ Theme (or Settings) picks *Default*, *Serif*, *Compact*,
+*Gruvbox Material Dark* or *Gruvbox Material Light* (the hard-contrast variants of
+[gruvbox-material](https://github.com/sainnhe/gruvbox-material), with its exact colours).
 For your own, put `.css` files in the folder that **View ▸ Theme ▸ Open Themes
 Folder** opens (`~/Library/Application Support/JuPrev/Themes`); they're applied
 after the default style and are listed by file name.

@@ -329,12 +329,14 @@ struct ThemeTests {
 
     @Test func listsDefaultBundledThenCustom() {
         let ids = Themes.available(customFolder: folder).map(\.id)
-        #expect(ids == ["default", "serif", "compact", "custom:Ocean.css"])
+        #expect(ids == ["default", "serif", "compact", "gruvbox-dark", "gruvbox-light", "custom:Ocean.css"])
     }
 
     @Test func loadsThemeCSS() {
         #expect(Themes.css(for: "default", customFolder: folder) == nil)
         #expect(Themes.css(for: "serif", customFolder: folder)?.contains("Iowan Old Style") == true)
+        #expect(Themes.css(for: "gruvbox-dark", customFolder: folder)?.contains("--background: #1d2021") == true)
+        #expect(Themes.css(for: "gruvbox-light", customFolder: folder)?.contains("--background: #f9f5d7") == true)
         #expect(Themes.css(for: "custom:Ocean.css", customFolder: folder) == "body { color: teal; }")
     }
 

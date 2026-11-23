@@ -11,7 +11,12 @@ public struct Theme: Equatable, Hashable, Sendable {
 }
 
 public enum Themes {
-    static let bundled: [(id: String, name: String)] = [("serif", "Serif"), ("compact", "Compact")]
+    static let bundled: [(id: String, name: String)] = [
+        ("serif", "Serif"),
+        ("compact", "Compact"),
+        ("gruvbox-dark", "Gruvbox Material Dark"),
+        ("gruvbox-light", "Gruvbox Material Light"),
+    ]
     static let customPrefix = "custom:"
     static let maxCSSBytes = 1024 * 1024
 
