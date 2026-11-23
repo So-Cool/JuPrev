@@ -71,6 +71,11 @@ final class NotebookWindowController: NSWindowController, NSMenuItemValidation {
         UserDefaults.standard.set(visible, forKey: Self.outlineVisibleKey)
     }
 
+    // File menu
+    @objc func exportHTML(_ sender: Any?) { notebookViewController.exportHTML() }
+    @objc func exportPDF(_ sender: Any?) { notebookViewController.exportPDF() }
+    @objc func printNotebook(_ sender: Any?) { notebookViewController.printNotebook() }
+
     @objc func toggleCode(_ sender: Any?) { notebookViewController.toggleCode() }
     @objc func toggleOutputs(_ sender: Any?) { notebookViewController.toggleOutputs() }
     @objc func actualSize(_ sender: Any?) { notebookViewController.zoom(to: 1) }

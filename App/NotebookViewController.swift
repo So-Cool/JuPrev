@@ -1,6 +1,7 @@
 import AppKit
 import NotebookKit
 import os
+import UniformTypeIdentifiers
 import WebKit
 
 private let logger = Logger(subsystem: "me.kcpr.juprev", category: "viewer")
@@ -238,6 +239,74 @@ final class NotebookViewController: NSViewController {
             let id = state["current"] as? String ?? self.outline.headings.first?.id
             if self.outline.current != id { self.outline.current = id }
         }
+    }
+
+    // MARK: Export and print
+
+    private var exportName: String {
+        document?.fileURL?.deletingPathExtension().lastPathComponent ?? document?.displayName ?? "Notebook"
+    }
+
+    /// The static page as shown (code/outputs choices, images), never with scripts.
+    func exportHTML() {
+        guard let window = view.window, let document else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.html]
+        panel.nameFieldStringValue = exportName + ".html"
+        panel.beginSheetModal(for: window) { response in
+            guard response == .OK, let url = panel.url else { return }
+            Task { @MainActor in
+                let options = RenderOptions(settings: JuPrevSettings.load(), showCode: self.showCode, showOutputs: self.showOutputs)
+                do {
+                    let rendered = try await RenderService.shared.render(document.contents, fileURL: document.fileURL, options: options).get()
+                    try Data(rendered.html.utf8).write(to: url, options: .atomic)
+                } catch {
+                    self.presentError(error)
+                }
+            }
+        }
+    }
+
+    func exportPDF() {
+        guard let window = view.window else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.pdf]
+        panel.nameFieldStringValue = exportName + ".pdf"
+        panel.beginSheetModal(for: window) { response in
+            guard response == .OK, let url = panel.url else { return }
+            let info = self.printInfo()
+            info.jobDisposition = .save
+            info.dictionary()[NSPrintInfo.AttributeKey.jobSavingURL] = url
+            self.runPrintOperation(info, showPanels: false)
+        }
+    }
+
+    func printNotebook() {
+        runPrintOperation(printInfo(), showPanels: true)
+    }
+
+    private func printInfo() -> NSPrintInfo {
+        let info = (NSPrintInfo.shared.copy() as? NSPrintInfo) ?? NSPrintInfo()
+        info.horizontalPagination = .fit
+        info.verticalPagination = .automatic
+        info.isHorizontallyCentered = false
+        info.isVerticallyCentered = false
+        for edge in [\NSPrintInfo.topMargin, \.bottomMargin, \.leftMargin, \.rightMargin] {
+            info[keyPath: edge] = 42 // ~15 mm
+        }
+        return info
+    }
+
+    /// WKWebView's print operation must be run modally for a window (not with `run()`)
+    /// and needs its view sized, or it produces blank pages.
+    private func runPrintOperation(_ info: NSPrintInfo, showPanels: Bool) {
+        guard let webView, let window = view.window else { return }
+        let operation = webView.printOperation(with: info)
+        operation.view?.frame = webView.bounds
+        operation.jobTitle = exportName
+        operation.showsPrintPanel = showPanels
+        operation.showsProgressPanel = true
+        operation.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
     }
 
     // MARK: Show code / outputs

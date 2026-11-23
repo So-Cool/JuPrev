@@ -56,6 +56,12 @@ enum MainMenu {
         menu.addItem(submenu(recent))
         menu.addItem(.separator())
         menu.addItem(item("Close", #selector(NSWindow.performClose(_:)), "w"))
+        menu.addItem(.separator())
+        menu.addItem(item("Export as HTML…", #selector(NotebookWindowController.exportHTML(_:)), "e", [.command, .shift]))
+        menu.addItem(item("Export as PDF…", #selector(NotebookWindowController.exportPDF(_:)), "e", [.command, .option]))
+        menu.addItem(.separator())
+        menu.addItem(item("Page Setup…", #selector(NSApplication.runPageLayout(_:)), "p", [.command, .shift]))
+        menu.addItem(item("Print…", #selector(NotebookWindowController.printNotebook(_:)), "p"))
         return menu
     }
 

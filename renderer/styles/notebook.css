@@ -214,8 +214,21 @@ html.finding ::selection { background: #ffd60a; color: #000; }
 .render-error { margin-top: 4em; text-align: center; color: var(--text-muted); }
 .render-error h1 { font-size: 1.25em; color: var(--text); margin-bottom: 0.5em; }
 
+/* Print and PDF export: always light, whatever the appearance; nothing clipped. */
 @media print {
+  :root {
+    --text: #1d1d1f; --text-muted: #6e6e73; --background: #ffffff; --rule: #d2d2d7;
+    --code-background: #f5f5f7; --code-text: #1d1d1f; --stderr-background: #fff5f4;
+    --error-background: #fff0ef; --link: #0066cc; --placeholder-text: #6e6e73; --table-stripe: #fafafa;
+    --ansi-black: #3e424d; --ansi-red: #c4372b; --ansi-green: #2d7d46; --ansi-yellow: #a46400;
+    --ansi-blue: #2163b8; --ansi-magenta: #9a3cad; --ansi-cyan: #1f7a87; --ansi-white: #8e8e93;
+    color-scheme: light;
+  }
+  body { font-size: 11pt; }
   .notebook { max-width: none; padding: 0; }
   .prompt { display: none; }
-  pre { white-space: pre-wrap; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .cell.code, .output-image, pre.source, table { break-inside: avoid; }
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; }
+  html.finding ::selection { background: transparent; color: inherit; }
 }
