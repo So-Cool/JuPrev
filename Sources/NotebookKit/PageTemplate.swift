@@ -44,7 +44,7 @@ enum PageTemplate {
         """
     }
 
-    static func errorDocument(title: String, message: String) -> String {
+    static func errorDocument(title: String, message: String, themeCSS: String?) -> String {
         document(
             title: title,
             body: """
@@ -53,7 +53,7 @@ enum PageTemplate {
             <p>\(escape(message))</p>
             </div>
             """,
-            options: RenderOptions()
+            options: RenderOptions(themeCSS: themeCSS)
         )
     }
 

@@ -7,6 +7,8 @@ final class FileWatcher {
     private let onChange: () -> Void
     private var source: DispatchSourceFileSystemObject?
     private var debounce: DispatchWorkItem?
+    /// While the file is missing, look again after this long (doubling up to 5 s).
+    private var retryDelay: TimeInterval = 0.5
 
     init(url: URL, onChange: @escaping () -> Void) {
         self.url = url
@@ -24,9 +26,16 @@ final class FileWatcher {
         source = nil
         let fd = open(url.path, O_EVTONLY)
         guard fd >= 0 else {
-            // Mid-replace (or deleted): look again shortly.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.watch() }
+            // Mid-replace, or deleted (and perhaps restored later, e.g. by git): look again,
+            // less and less often.
+            DispatchQueue.main.asyncAfter(deadline: .now() + retryDelay) { [weak self] in self?.watch() }
+            retryDelay = min(retryDelay * 2, 5)
             return
+        }
+        if retryDelay > 0.5 {
+            // The file is back after being missing: show what's there now.
+            retryDelay = 0.5
+            scheduleChange()
         }
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd, eventMask: [.write, .extend, .delete, .rename], queue: .main

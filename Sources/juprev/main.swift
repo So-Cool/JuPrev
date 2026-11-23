@@ -11,13 +11,14 @@ options:
   --trust-parent-folders    let markdown images use ../ paths outside the notebook's folder
   --no-local-images         don't read any local image files
   --allow-scripts           keep interactive outputs and allow scripts (CSP relaxed)
-  --theme <id>              default, serif, compact or custom:<file>.css
+  --theme <id>              one of: \(Themes.available().map(\.id).joined(separator: ", "))
   --hide-code, --hide-outputs, --hide-stderr
                             hide those parts (as View ▸ Show Code / Outputs / stderr)
   --body-only               print only the cells' HTML fragment
   --time                    print timing to stderr
 
-Without image flags, the shared JuPrev settings file decides:
+Anything not set by a flag (theme, shown parts, local and remote images) comes from
+the settings file shared with the JuPrev app:
   \(JuPrevSettings.defaultFileURL.path)
 """
 

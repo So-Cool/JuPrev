@@ -96,9 +96,9 @@ public final class NotebookRenderer {
 
     public static let stylesheet: String = loadResource("style", "css")
 
-    /// A styled page explaining why a notebook couldn't be shown.
-    public static func errorPage(title: String, message: String) -> String {
-        PageTemplate.errorDocument(title: title, message: message)
+    /// A styled page explaining why a notebook couldn't be shown, in the given theme.
+    public static func errorPage(title: String, message: String, themeCSS: String? = nil) -> String {
+        PageTemplate.errorDocument(title: title, message: message, themeCSS: themeCSS)
     }
 
     public init() throws {

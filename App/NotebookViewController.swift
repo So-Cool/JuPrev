@@ -121,7 +121,7 @@ final class NotebookViewController: NSViewController {
             interactiveOutputs = rendered.interactiveOutputs
             headings = rendered.headings
         case .failure(let error):
-            html = NotebookRenderer.errorPage(title: document.displayName, message: error.localizedDescription)
+            html = NotebookRenderer.errorPage(title: document.displayName, message: error.localizedDescription, themeCSS: options.themeCSS)
             interactiveOutputs = 0
             headings = []
         }

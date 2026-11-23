@@ -119,7 +119,8 @@ Notebooks can contain anything, so JuPrev treats them as untrusted:
 - **No scripts.**
   Pages are static:
   JavaScript is switched off and every network request is blocked.
-  Exported or copied HTML also carries a strict Content Security Policy.
+  HTML saved with File ▸ Export as HTML also carries a strict Content Security
+  Policy, so it stays inert in a browser.
 - **Interactive outputs** (widgets, Plotly, Bokeh…) show the static image the
   notebook saved or a placeholder.
   In the app, a bar offers **Allow Scripts** for that window only.
@@ -133,8 +134,10 @@ Notebooks can contain anything, so JuPrev treats them as untrusted:
   Symlinks are resolved before that check and absolute paths are never loaded.
 
 The app and its extensions are sandboxed.
-They read files outside the sandbox only to show images next to a notebook and
-the rules above decide which ones.
+Outside the sandbox they read only images next to a notebook (the rules above
+decide which ones) and JuPrev's own settings and custom themes in
+`~/Library/Application Support/JuPrev`, which only the app writes to;
+exports go where you choose in the save panel.
 
 ## Limitations
 
@@ -169,7 +172,9 @@ swift run juprev render path/to/notebook.ipynb -o /tmp/out.html --time
 # After an intended rendering change:
 JUPREV_RECORD_SNAPSHOTS=1 swift test
 
-# Build, install to ~/Applications and register the extensions (needs xcodegen)
+# Build, install to ~/Applications and register the extensions (needs xcodegen).
+# If JuPrev is also installed with Homebrew, both copies register the same
+# extensions: open notebooks with the dev copy by path, and remove it when done.
 scripts/install-dev.sh
 qlmanage -p path/to/notebook.ipynb
 /usr/bin/log stream --predicate 'subsystem BEGINSWITH "me.kcpr.juprev"'

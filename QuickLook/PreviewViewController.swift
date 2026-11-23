@@ -23,16 +23,16 @@ final class PreviewViewController: NSViewController, QLPreviewingController {
     private static func render(_ url: URL) -> (html: String, summary: String) {
         lock.lock()
         defer { lock.unlock() }
+        // Read on every preview so changes made in the app apply without restarting Quick Look.
+        // Quick Look never loads remote content, whatever the app's setting says.
+        let options = RenderOptions(settings: JuPrevSettings.load(), remoteImages: false)
         do {
             if sharedRenderer == nil { sharedRenderer = try NotebookRenderer() }
-            // Read on every preview so changes made in the app apply without restarting Quick Look.
-            // Quick Look never loads remote content, whatever the app's setting says.
-            let options = RenderOptions(settings: JuPrevSettings.load(), remoteImages: false)
             let result = try sharedRenderer!.render(fileURL: url, options: options)
             return (result.html, "\(result.cellCount) cells, \(result.html.utf8.count / 1024) KB, images: \(options.localImages.rawValue)")
         } catch {
             logger.error("failed \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
-            return (NotebookRenderer.errorPage(title: url.lastPathComponent, message: error.localizedDescription), "error page")
+            return (NotebookRenderer.errorPage(title: url.lastPathComponent, message: error.localizedDescription, themeCSS: options.themeCSS), "error page")
         }
     }
 
