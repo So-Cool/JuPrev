@@ -46,6 +46,9 @@ final class NotebookViewController: NSViewController {
         NotificationCenter.default.addObserver(forName: .juprevSettingsDidChange, object: nil, queue: .main) { [weak self] _ in
             self?.reload(preservingScroll: true)
         }
+        NotificationCenter.default.addObserver(forName: NotebookDocument.contentsDidChange, object: document, queue: .main) { [weak self] _ in
+            self?.reload(preservingScroll: true)
+        }
         reload(preservingScroll: false)
     }
 
@@ -79,6 +82,7 @@ final class NotebookViewController: NSViewController {
         guard let webView = await webView(for: mode) else { return }
         guard !Task.isCancelled else { return }
 
+        logger.notice("rendered \(document.displayName, privacy: .public): \(html.utf8.count / 1024) KB")
         bar.update(interactiveOutputs: interactiveOutputs, scriptsAllowed: scriptsAllowed)
         pendingScrollY = scrollY
         webView.loadHTMLString(html, baseURL: nil)

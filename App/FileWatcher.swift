@@ -1,0 +1,53 @@
+import Foundation
+
+/// Calls `onChange` (on the main queue, debounced) when the file at `url` is modified,
+/// including editors' atomic saves that replace the file with a new one.
+final class FileWatcher {
+    private let url: URL
+    private let onChange: () -> Void
+    private var source: DispatchSourceFileSystemObject?
+    private var debounce: DispatchWorkItem?
+
+    init(url: URL, onChange: @escaping () -> Void) {
+        self.url = url
+        self.onChange = onChange
+        watch()
+    }
+
+    deinit {
+        debounce?.cancel()
+        source?.cancel()
+    }
+
+    private func watch() {
+        source?.cancel()
+        source = nil
+        let fd = open(url.path, O_EVTONLY)
+        guard fd >= 0 else {
+            // Mid-replace (or deleted): look again shortly.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.watch() }
+            return
+        }
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd, eventMask: [.write, .extend, .delete, .rename], queue: .main
+        )
+        source.setEventHandler { [weak self] in
+            guard let self else { return }
+            // An atomic save renames a new file over ours: the old descriptor now points
+            // at the replaced file, so start watching the path afresh.
+            if !source.data.isDisjoint(with: [.delete, .rename]) { self.watch() }
+            self.scheduleChange()
+        }
+        source.setCancelHandler { close(fd) }
+        source.resume()
+        self.source = source
+    }
+
+    /// Editors often write in several steps; report once things settle.
+    private func scheduleChange() {
+        debounce?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.onChange() }
+        debounce = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: work)
+    }
+}
