@@ -50,6 +50,7 @@ final class PreviewViewController: NSViewController, QLPreviewingController {
         // the preview panel): replace the previous page rather than stacking web views.
         self.webView?.removeFromSuperview()
         self.webView = nil
+        loadWaiter?.finish(CancellationError()) // an overlapping call for the previous file
 
         // Fails closed: without the network-blocking rules there is no preview.
         let webView = WKWebView(frame: view.bounds, configuration: try await NotebookWebView.makeConfiguration(.static(remoteImages: false)))

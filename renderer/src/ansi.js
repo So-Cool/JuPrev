@@ -15,7 +15,10 @@ export function collapseCarriageReturns(text) {
 export function ansiToHtml(text) {
   let out = "";
   let open = 0;
-  const parts = escapeHtml(text).split(/\x1b\[([\d;]*)m/);
+  // Only colours/styles (SGR, "…m") are rendered; other control sequences such as
+  // erase-line (ESC[K) or cursor moves from progress bars are dropped.
+  const cleaned = text.replace(/\x1b\[[\d;?]*[A-Za-ln-z@]/g, "").replace(/\x1b(?!\[)/g, "");
+  const parts = escapeHtml(cleaned).split(/\x1b\[([\d;]*)m/);
   for (let i = 0; i < parts.length; i++) {
     if (i % 2 === 0) {
       out += parts[i];

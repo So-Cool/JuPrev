@@ -29,10 +29,17 @@ const BLOCKED_REASONS = {
 function resolve(src) {
   if (src.startsWith("data:image/")) return { src };
   if (src.startsWith("attachment:")) {
-    const bundle = attachments[decodeURIComponent(src.slice("attachment:".length))];
+    // A malformed name or attachment only loses that image, never the whole notebook.
+    let name = src.slice("attachment:".length);
+    try {
+      name = decodeURIComponent(name);
+    } catch (e) {}
+    const bundle = attachments[name];
     const mime = bundle && Object.keys(bundle).find((m) => /^image\/[\w.+-]+$/.test(m));
     if (!mime) return { blocked: "missing" };
-    const data = Array.isArray(bundle[mime]) ? bundle[mime].join("") : bundle[mime];
+    const value = bundle[mime];
+    const data = Array.isArray(value) ? value.join("") : value;
+    if (typeof data !== "string") return { blocked: "unreadable" };
     return { src: `data:${mime};base64,${data.replace(/\s/g, "")}` };
   }
   if (/^https:\/\//i.test(src)) return remoteImages ? { src } : { blocked: "remote" };

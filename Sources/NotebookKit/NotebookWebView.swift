@@ -84,7 +84,8 @@ public enum NotebookWebView {
             return url?.scheme == "about" && url?.fragment != nil ? .allow : .cancel
         }
         guard action.targetFrame?.isMainFrame == true else {
-            // Subframes (iframes) only exist in interactive outputs; the static CSP blocks them anyway.
+            // Subframes: static pages' CSP blocks frames (default-src 'none'); with scripts
+            // allowed, interactive outputs may use them.
             return .allow
         }
         return url?.scheme == "about" ? .allow : .cancel

@@ -105,13 +105,13 @@ final class FindBar: NSView, NSSearchFieldDelegate {
         }
     }
 
-    /// After a re-render the old matches are gone; search again from the top.
+    /// After a re-render (live reload, settings) the selection is gone: recount, and
+    /// continue the next search from the top of what's on screen, not from the top of the page.
     func contentDidChange() {
         guard !isHidden else { return }
         setFindingClass(true)
         guard !query.isEmpty else { return }
-        query = ""
-        searchChanged()
+        placeCaretAtTopOfView { [weak self] in self?.refreshState() }
     }
 
     @objc private func searchChanged() {
@@ -125,8 +125,8 @@ final class FindBar: NSView, NSSearchFieldDelegate {
             webView?.evaluateJavaScript("window.getSelection().removeAllRanges()")
             return
         }
-        countMatches(of: text) { [weak self] n in
-            self?.matches = n
+        // A new search starts from the top.
+        webView?.evaluateJavaScript("window.getSelection().removeAllRanges()") { [weak self] _, _ in
             self?.step(backwards: false)
         }
     }
@@ -142,28 +142,62 @@ final class FindBar: NSView, NSSearchFieldDelegate {
         configuration.backwards = backwards
         configuration.caseSensitive = false
         configuration.wraps = true
-        webView.find(query, configuration: configuration) { [weak self] result in
-            guard let self else { return }
-            if result.matchFound, self.matches > 0 {
-                self.current = backwards
-                    ? (self.current <= 1 ? self.matches : self.current - 1)
-                    : (self.current >= self.matches ? 1 : self.current + 1)
+        // WebKit's find continues from the page's selection (the last match, or the caret
+        // contentDidChange left at the top of the view).
+        webView.find(query, configuration: configuration) { [weak self] _ in
+            self?.refreshState()
+        }
+    }
+
+    /// Puts an empty selection at the top of what's on screen, so the next search
+    /// continues from where the reader is.
+    private func placeCaretAtTopOfView(then completion: @escaping () -> Void) {
+        let script = """
+            const r = document.caretRangeFromPoint(Math.min(innerWidth / 2, 200), 40);
+            const s = getSelection();
+            s.removeAllRanges();
+            if (r) s.addRange(r);
+            """
+        webView?.callAsyncJavaScript(script, arguments: [:], in: nil, in: .page) { _ in completion() }
+    }
+
+    /// Updates "N of M" from the page: matches in the visible text (hidden code or outputs
+    /// excluded, as WebKit's find skips them) and which one is selected. Host-evaluated
+    /// script, so it runs even though the page's own JavaScript is disabled.
+    private func refreshState() {
+        let script = """
+            const n = needle.toLowerCase();
+            const count = (t) => t.toLowerCase().split(n).length - 1;
+            const sel = getSelection();
+            const at = sel.rangeCount ? sel.getRangeAt(0) : null;
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+                acceptNode: (t) => t.parentElement && t.parentElement.offsetParent !== null
+                    ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT,
+            });
+            let text = "", before = null;
+            for (let t; (t = walker.nextNode());) {
+                if (at && before === null) {
+                    if (t === at.startContainer) before = text + t.data.slice(0, at.startOffset);
+                    else if (at.comparePoint(t, 0) > 0) before = text;
+                }
+                text += t.data;
             }
+            const selected = at !== null && sel.toString().toLowerCase() === n;
+            return { total: count(text), index: before === null ? 0 : count(before) + (selected ? 1 : 0) };
+            """
+        webView?.callAsyncJavaScript(script, arguments: ["needle": query], in: nil, in: .page) { [weak self] result in
+            guard let self, case .success(let value) = result, let state = value as? [String: Any] else { return }
+            self.matches = state["total"] as? Int ?? 0
+            self.current = min(state["index"] as? Int ?? 0, self.matches)
             self.updateCount()
         }
     }
 
-    /// Counts case-insensitive occurrences in the page text. Host-evaluated script, so it
-    /// runs even though the page's own JavaScript is disabled.
-    private func countMatches(of text: String, completion: @escaping (Int) -> Void) {
-        let script = "(document.body.innerText.toLowerCase().split(needle.toLowerCase()).length - 1)"
-        webView?.callAsyncJavaScript("return \(script)", arguments: ["needle": text], in: nil, in: .page) { result in
-            completion((try? result.get()) as? Int ?? 0)
-        }
-    }
-
     private func updateCount() {
-        count.stringValue = query.isEmpty ? "" : matches == 0 ? "Not found" : "\(current) of \(matches)"
+        count.stringValue = query.isEmpty ? ""
+            : matches == 0 ? "Not found"
+            : current == 0 ? (matches == 1 ? "1 match" : "\(matches) matches")
+            : "\(current) of \(matches)"
         count.textColor = !query.isEmpty && matches == 0 ? .systemRed : .secondaryLabelColor
     }
 

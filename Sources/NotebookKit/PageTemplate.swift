@@ -4,11 +4,14 @@ import Foundation
 enum PageTemplate {
     /// Static pages may load nothing: no scripts, no network, no frames.
     /// Everything they need (images, fonts) is inlined as `data:` URIs.
-    static let staticCSP = "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'"
-    static let staticRemoteImagesCSP = "default-src 'none'; img-src data: https:; font-src data:; style-src 'unsafe-inline'"
+    /// `base-uri` and `form-action` aren't covered by `default-src`; without them a stray
+    /// <base> or <form> could retarget links or submissions.
+    static let staticCSP = "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"
+    static let staticRemoteImagesCSP = "default-src 'none'; img-src data: https:; font-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"
 
     /// With scripts allowed, outputs typically pull libraries (Plotly, Bokeh…) from CDNs.
-    static let scriptsCSP = "default-src 'none'; img-src data: https:; font-src data: https:; style-src 'unsafe-inline' https:; script-src 'unsafe-inline' 'unsafe-eval' https:; connect-src https:"
+    /// Frames too: some outputs render in an iframe (Folium maps, Plotly's iframe renderer).
+    static let scriptsCSP = "default-src 'none'; img-src data: blob: https:; font-src data: https:; style-src 'unsafe-inline' https:; script-src 'unsafe-inline' 'unsafe-eval' https:; connect-src https:; frame-src data: blob: https:; base-uri 'none'; form-action 'none'"
 
     static func csp(for options: RenderOptions) -> String {
         options.allowScripts ? scriptsCSP : options.remoteImages ? staticRemoteImagesCSP : staticCSP

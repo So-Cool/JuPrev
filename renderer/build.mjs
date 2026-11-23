@@ -5,7 +5,7 @@
 // and the licence notices for every npm package that ends up in them:
 //   ACKNOWLEDGEMENTS.md (repository root) and App/Credits.html (the About window)
 import { build } from "esbuild";
-import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -48,6 +48,8 @@ writeFileSync(join(outDir, "style.css"), css);
 
 // Bundled themes: applied after style.css (see NotebookKit/Themes.swift).
 const themesDir = join(here, "styles/themes");
+// Start empty so a theme removed from styles/themes doesn't linger in the output.
+rmSync(join(outDir, "themes"), { recursive: true, force: true });
 mkdirSync(join(outDir, "themes"), { recursive: true });
 for (const file of readdirSync(themesDir).filter((f) => f.endsWith(".css"))) {
   copyFileSync(join(themesDir, file), join(outDir, "themes", file));

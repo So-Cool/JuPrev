@@ -97,6 +97,9 @@ final class NotebookViewController: NSViewController {
                 self?.reload(preservingScroll: true)
             },
             center.addObserver(forName: NotebookDocument.contentsDidChange, object: document, queue: .main) { [weak self] _ in
+                // Trust is per content, as in Jupyter: a notebook changed on disk is shown
+                // static again until scripts are allowed for it.
+                self?.scriptsAllowed = false
                 self?.reload(preservingScroll: true)
             },
         ]
@@ -114,7 +117,12 @@ final class NotebookViewController: NSViewController {
 
     private func render(preservingScroll: Bool) async {
         guard let document else { return }
-        let scrollY = preservingScroll ? await currentScrollY() : nil
+        // If the previous render's page hasn't finished loading, its saved position is still
+        // the reader's; reading scrollY from the half-loaded page would give 0.
+        var scrollY: Double?
+        if preservingScroll {
+            if let pending = pendingScrollY { scrollY = pending } else { scrollY = await currentScrollY() }
+        }
         let options = RenderOptions(
             settings: JuPrevSettings.load(),
             allowScripts: scriptsAllowed,
@@ -369,11 +377,24 @@ extension NotebookViewController: WKNavigationDelegate {
         }
     }
 
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        findBar.contentDidChange()
-        guard let y = pendingScrollY else { return }
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         pendingScrollY = nil
-        webView.evaluateJavaScript("window.scrollTo(0, \(y))")
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        pendingScrollY = nil
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // Restore the reader's position first: the find bar resumes from what's on screen.
+        guard let y = pendingScrollY else {
+            findBar.contentDidChange()
+            return
+        }
+        pendingScrollY = nil
+        webView.evaluateJavaScript("window.scrollTo(0, \(y))") { [weak self] _, _ in
+            self?.findBar.contentDidChange()
+        }
     }
 }
 

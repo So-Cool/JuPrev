@@ -2,7 +2,7 @@
 import { ansiToHtml, collapseCarriageReturns } from "./ansi.js";
 import { renderMarkdown } from "./markdown.js";
 import { renderImage } from "./images.js";
-import { escapeHtml, joinSource } from "./util.js";
+import { escapeHtml, joinSource, stripPageLevelTags } from "./util.js";
 
 const WIDGET_MIME = "application/vnd.jupyter.widget-view+json";
 const MIME_ORDER = [
@@ -20,10 +20,8 @@ const MIME_ORDER = [
 ];
 const STATIC_FALLBACKS = ["image/svg+xml", "image/png", "image/jpeg", "image/gif", "image/webp", "text/plain"];
 
-// Tags that would act on the whole page rather than the output.
-const PAGE_LEVEL_TAGS_RE = /<(meta|base|link)\b[^>]*>/gi;
-
-const looksInteractive = (html) => /<script\b|<iframe\b|<[^>]+\son[a-z]+\s*=/i.test(html);
+// Attributes can be separated by "/" as well as whitespace: <img/src=x/onerror=…>.
+const looksInteractive = (html) => /<script\b|<iframe\b|<[^>]+[\s/]on[a-z]+\s*=/i.test(html);
 
 export function createOutputRenderer({ allowScripts }) {
   let interactiveOutputs = 0;
@@ -50,7 +48,8 @@ export function createOutputRenderer({ allowScripts }) {
           interactiveOutputs++;
           if (!allowScripts) return renderStaticFallback(data, "Interactive output — scripts are disabled");
         }
-        return `<div class="output-html">${value.replace(PAGE_LEVEL_TAGS_RE, "")}</div>`;
+        // With scripts allowed, interactive outputs may need their stylesheets (<link>).
+        return `<div class="output-html">${allowScripts ? value : stripPageLevelTags(value)}</div>`;
       case "image/svg+xml":
         // As an <img>, scripts inside the SVG never run and its styles can't leak into the page.
         return `<div class="output-image">${renderImage(svgDataURI(value), "")}</div>`;

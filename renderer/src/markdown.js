@@ -3,7 +3,7 @@
 import MarkdownIt from "markdown-it";
 import hljs from "highlight.js/lib/common";
 import katex from "katex";
-import { escapeHtml } from "./util.js";
+import { escapeHtml, stripPageLevelTags } from "./util.js";
 import { renderImage } from "./images.js";
 
 // Private-use characters: markdown-it rewrites NUL, so it can't be used as a placeholder.
@@ -24,11 +24,11 @@ const md = new MarkdownIt({
 // Heading ids follow Jupyter (text with spaces as dashes) so in-notebook links like
 // [see](#Training-the-Model) work; the outline sidebar uses them too.
 let headings = [];
-let usedIds = new Map();
+let usedIds = new Set();
 let mathSource = [];
 export function resetHeadings() {
   headings = [];
-  usedIds = new Map();
+  usedIds = new Set();
 }
 export const collectedHeadings = () => headings;
 
@@ -41,13 +41,15 @@ md.core.ruler.push("juprev_heading_ids", (state) => {
       .filter((t) => t.type === "text" || t.type === "code_inline")
       .map((t) => t.content)
       .join("")
-      .replace(new RegExp(`${OPEN}M(\\d+)${CLOSE}`, "g"), (_, n) => mathSource[+n])
+      .replace(new RegExp(`${OPEN}M(\\d+)${CLOSE}`, "g"), (m, n) => mathSource[+n] ?? m)
       .trim();
     if (!text) continue;
+    // Suffix duplicates (-1, -2, …), skipping ids a later heading already spells out
+    // literally: "A", "A", "A-1" become A, A-1, A-1-1.
     const base = text.replace(/\s+/g, "-");
-    const count = usedIds.get(base) || 0;
-    usedIds.set(base, count + 1);
-    const id = count === 0 ? base : `${base}-${count}`;
+    let id = base;
+    for (let n = 1; usedIds.has(id); n++) id = `${base}-${n}`;
+    usedIds.add(id);
     tokens[i].attrSet("id", id);
     if (state.env.collectHeadings) headings.push({ level: Number(tokens[i].tag.slice(1)), text, id });
   }
@@ -67,8 +69,8 @@ const rewriteRawImages = (html) =>
   });
 const htmlBlock = md.renderer.rules.html_block;
 const htmlInline = md.renderer.rules.html_inline;
-md.renderer.rules.html_block = (...args) => rewriteRawImages(htmlBlock(...args));
-md.renderer.rules.html_inline = (...args) => rewriteRawImages(htmlInline(...args));
+md.renderer.rules.html_block = (...args) => rewriteRawImages(stripPageLevelTags(htmlBlock(...args)));
+md.renderer.rules.html_inline = (...args) => rewriteRawImages(stripPageLevelTags(htmlInline(...args)));
 
 // Like MathJax in Jupyter, \newcommand in one cell is visible in later cells.
 let macros = {};
@@ -126,7 +128,9 @@ export function renderTex(tex, displayMode) {
 }
 
 
-const CODE_RE = /(^|\n)(```|~~~)[\s\S]*?\n\2|`+[^`\n]*`+/g;
+// Fenced code (also indented, e.g. inside list items) and inline code. Like Jupyter's own
+// math extraction, 4-space indented code blocks aren't recognised.
+const CODE_RE = /(^|\n)([ \t]*)(```|~~~)[\s\S]*?\n\2\3|`+[^`\n]*`+/g;
 const MATH_RE =
   /(\$\$[\s\S]+?\$\$)|(\\\[[\s\S]+?\\\])|(\\begin\{([a-zA-Z*]+)\}[\s\S]+?\\end\{\4\})|(\\\([\s\S]+?\\\))|((?<![\\$])\$(?![\s$])(?:\\.|[^$\n\\])+?(?<!\s)\$)/g;
 
@@ -151,8 +155,8 @@ export function renderMarkdown(text, { collectHeadings = false } = {}) {
     mathSource.push(m.replace(/^\$+|\$+$/g, "").replace(/^\\[([]|\\[)\]]$/g, ""));
     return `${OPEN}M${math.length - 1}${CLOSE}`;
   });
-  text = text.replace(new RegExp(`${OPEN}C(\\d+)${CLOSE}`, "g"), (_, i) => code[+i]);
+  text = text.replace(new RegExp(`${OPEN}C(\\d+)${CLOSE}`, "g"), (m, i) => code[+i] ?? m);
   return md
     .render(text, { collectHeadings })
-    .replace(new RegExp(`${OPEN}M(\\d+)${CLOSE}`, "g"), (_, i) => math[+i]);
+    .replace(new RegExp(`${OPEN}M(\\d+)${CLOSE}`, "g"), (m, i) => math[+i] ?? m);
 }

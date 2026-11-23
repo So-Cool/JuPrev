@@ -133,7 +133,7 @@ struct NotebookRendererTests {
 
     @Test func staticPagesForbidScriptsAndNetwork() throws {
         let html = try render("outputs.ipynb").html
-        #expect(html.contains(#"<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'">"#))
+        #expect(html.contains(#"<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">"#))
         #expect(!html.contains("script-src"))
         #expect(html.contains("<title>outputs</title>"))
         #expect(html.contains("@font-face"), "KaTeX fonts are inlined")
@@ -195,6 +195,68 @@ struct NotebookRendererTests {
         let data = try Data(contentsOf: fixtures.appendingPathComponent("images/nb/images.ipynb"))
         let html = try Self.renderer.render(data: data, notebookFolder: nil).bodyHTML
         #expect(html.contains(#"data-reason="disabled""#))
+    }
+
+    // MARK: Hardening (found in review)
+
+    func render(cells: String, _ options: RenderOptions = RenderOptions()) throws -> RenderedNotebook {
+        let nb = #"{"nbformat": 4, "metadata": {}, "cells": ["# + cells + #"]}"#
+        return try Self.renderer.render(data: Data(nb.utf8), notebookFolder: nil, options: options)
+    }
+
+    @Test func pageLevelTagsCantRedirectOrRetarget() throws {
+        let markdown = try render(cells: #"{"cell_type": "markdown", "metadata": {}, "source": "<meta http-equiv=\"refresh\" content=\"0;url=https://e.com\"><base href=\"https://e/\">x"}"#)
+        #expect(!markdown.bodyHTML.lowercased().contains("<meta") && !markdown.bodyHTML.lowercased().contains("<base"))
+        let reassembled = try render(cells: #"{"cell_type": "code", "metadata": {}, "source": "", "outputs": [{"output_type": "display_data", "data": {"text/html": "<met<meta>a http-equiv=\"refresh\" content=\"0\">"}}]}"#)
+        #expect(!reassembled.bodyHTML.lowercased().contains("<meta"))
+        #expect(markdown.html.contains("base-uri 'none'"))
+    }
+
+    @Test func badAttachmentsLoseOnlyTheirImage() throws {
+        let malformed = try render(cells: #"{"cell_type": "markdown", "metadata": {}, "source": "![x](attachment:%E0%A4%A) ok"}"#)
+        #expect(malformed.bodyHTML.contains("ok"))
+        let notAString = try render(cells: #"{"cell_type": "markdown", "metadata": {}, "source": "![x](attachment:a.png)", "attachments": {"a.png": {"image/png": 5}}}"#)
+        #expect(notAString.bodyHTML.contains(#"data-reason="unreadable""#))
+    }
+
+    @Test func titlesComeFromRealLevelOneHeadings() throws {
+        #expect(try render(cells: ##"{"cell_type": "markdown", "metadata": {}, "source": "# Learn C#"}"##).title == "Learn C#")
+        #expect(try render(cells: #"{"cell_type": "markdown", "metadata": {}, "source": "```bash\n# install deps\n```\n## Sub\n# **Real** Title"}"#).title == "Real Title")
+    }
+
+    @Test func headingIdsStayUnique() throws {
+        let ids = try render(cells: ##"{"cell_type": "markdown", "metadata": {}, "source": "# A\n# A\n# A-1"}"##).headings.map(\.id)
+        #expect(ids == ["A", "A-1", "A-1-1"])
+    }
+
+    @Test func codeInListItemsIsNotMath() throws {
+        let html = try render(cells: #"{"cell_type": "markdown", "metadata": {}, "source": "- item\n\n  ```\n  $a$\n  ```"}"#).bodyHTML
+        #expect(!html.contains("katex"))
+    }
+
+    @Test func nonColourEscapesAreDropped() throws {
+        let html = try render(cells: #"{"cell_type": "code", "metadata": {}, "source": "", "outputs": [{"output_type": "stream", "name": "stderr", "text": "a\u001b[Kb\u001b[31mred"}]}"#).bodyHTML
+        #expect(html.contains(#"ab<span class="ansi-red-fg">red</span>"#))
+        #expect(!html.contains("\u{1B}"))
+    }
+
+    @Test func byteOrderMarkIsAccepted() throws {
+        let data = Data([0xEF, 0xBB, 0xBF]) + Data(#"{"nbformat": 4, "metadata": {}, "cells": []}"#.utf8)
+        #expect(try Self.renderer.render(data: data, notebookFolder: nil).cellCount == 0)
+    }
+
+    @Test func slashSeparatedHandlersCountAsInteractive() throws {
+        let result = try render(cells: #"{"cell_type": "code", "metadata": {}, "source": "", "outputs": [{"output_type": "display_data", "data": {"text/html": "<img/src=x/onerror=alert(1)>"}}]}"#)
+        #expect(result.interactiveOutputs == 1)
+    }
+
+    @Test func scriptsModeAllowsFramesAndStylesheets() throws {
+        let result = try render(
+            cells: #"{"cell_type": "code", "metadata": {}, "source": "", "outputs": [{"output_type": "display_data", "data": {"text/html": "<link rel=stylesheet href=https://x/y.css><script>1</script>"}}]}"#,
+            RenderOptions(allowScripts: true)
+        )
+        #expect(result.bodyHTML.contains("<link rel=stylesheet"))
+        #expect(result.html.contains("frame-src data: blob: https:"))
     }
 
     // MARK: Errors
@@ -297,6 +359,12 @@ struct NotebookSummaryTests {
     @Test func rejectsNonNotebooks() {
         #expect(throws: (any Error).self) { try NotebookSummary(data: Data("[1, 2]".utf8)) }
         #expect(throws: (any Error).self) { try NotebookSummary(data: Data()) }
+    }
+
+    @Test func privateUseCharactersDontCrash() throws {
+        let nb = ##"{"nbformat": 4, "metadata": {}, "cells": [{"cell_type": "markdown", "source": "# T\nicon \ue000M7\ue001 here"}]}"##
+        let s = try NotebookSummary(data: Data(nb.utf8))
+        #expect(s.lines.first?.contains("here") == true)
     }
 
     @Test func plainTextStripsMarkup() {

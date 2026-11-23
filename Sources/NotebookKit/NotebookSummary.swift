@@ -98,7 +98,12 @@ public struct NotebookSummary: Equatable, Sendable {
         for (pattern, template) in replacements {
             s = s.replacingOccurrences(of: pattern, with: template, options: .regularExpression)
         }
-        s = s.replacingMatches(of: "\u{E000}(\\d+)\u{E001}") { math[Int($0[1])!] }
+        // The notebook's own text may contain these private-use characters: only substitute
+        // indices we created.
+        s = s.replacingMatches(of: "\u{E000}(\\d+)\u{E001}") { groups in
+            guard let i = Int(groups[1]), math.indices.contains(i) else { return groups[0] }
+            return math[i]
+        }
             .replacingOccurrences(of: "\u{E002}", with: "$")
         return s.trimmingCharacters(in: .whitespaces)
     }

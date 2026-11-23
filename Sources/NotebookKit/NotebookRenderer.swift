@@ -60,7 +60,7 @@ public struct RenderedNotebook: Sendable {
     public let html: String
     /// The notebook's cells as an HTML fragment (no <head>, styles or CSP).
     public let bodyHTML: String
-    /// `metadata.title`, else the first level-1 markdown heading.
+    /// `metadata.title`, else the first level-1 markdown heading, else the file name.
     public let title: String?
     public let language: String
     public let cellCount: Int
@@ -138,9 +138,11 @@ public final class NotebookRenderer {
         options: RenderOptions = RenderOptions()
     ) throws -> RenderedNotebook {
         guard !data.isEmpty else { throw NotebookRenderError.invalidJSON("the file is empty") }
-        guard let json = String(data: data, encoding: .utf8) else {
+        guard var json = String(data: data, encoding: .utf8) else {
             throw NotebookRenderError.invalidJSON("not UTF-8 text")
         }
+        // JSON.parse rejects a byte-order mark, which some Windows editors write.
+        if json.hasPrefix("\u{FEFF}") { json.removeFirst() }
         currentResolver = notebookFolder.map { LocalImageResolver(notebookFolder: $0, policy: options.localImages) }
         defer { currentResolver = nil }
 

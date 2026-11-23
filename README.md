@@ -101,7 +101,7 @@ The simplest themes override the colour variables, for light and dark mode:
   --text: #3b3a36; --background: #fdf6e3; --code-background: #f3ecd8;
   --link: #b58900; --rule: #e6dfca; --text-muted: #93a1a1;
 }
-@media (prefers-color-scheme: dark) {
+@media screen and (prefers-color-scheme: dark) {
   :root { --text: #d6d2c4; --background: #1f2327; --code-background: #2a2f34; }
 }
 ```
@@ -110,7 +110,8 @@ Other variables: `--code-text`, `--stderr-background`, `--error-background`,
 `--placeholder-text`, `--table-stripe` and `--ansi-{black,red,green,yellow,blue,magenta,cyan,white}`.
 Typography and layout can be changed with ordinary CSS, e.g. `body { font-family: … }`
 or `.notebook { max-width: 50em; }`.
-Printing and PDF export always use the light colours.
+Printing and PDF export use the light colours: keep a theme's dark colours inside
+`@media screen`, as above, so they don't reach the page.
 
 ## Privacy and security
 
@@ -124,14 +125,19 @@ Notebooks can contain anything, so JuPrev treats them as untrusted:
 - **Interactive outputs** (widgets, Plotly, Bokeh…) show the static image the
   notebook saved or a placeholder.
   In the app, a bar offers **Allow Scripts** for that window only.
-  It's never remembered and Quick Look never runs scripts.
+  It's never remembered, it's switched off again when the notebook changes on
+  disk, and Quick Look never runs scripts.
 - **Nothing from the Internet by default.**
-  Images linked from the web load only if you turn on *Load remote images* and
-  only in the app.
+  Images linked from the web load only if you turn on *Load remote images*,
+  and then only in the app and in HTML it exports (or `juprev render` writes);
+  Quick Look never loads them.
 - **Local images** referenced from Markdown load only from the notebook's
-  folder and its subfolders, unless you turn on
-  *Load images from parent folders*.
-  Symlinks are resolved before that check and absolute paths are never loaded.
+  folder and its subfolders.
+  *Load images from parent folders* lifts that limit for relative paths such as
+  `../figures/plot.png`: since `..` can be repeated, they can then reach any
+  image on the disk.
+  Symlinks are resolved before the folder check and absolute paths are never
+  loaded.
 
 The app and its extensions are sandboxed.
 Outside the sandbox they read only images next to a notebook (the rules above

@@ -42,7 +42,7 @@ struct SettingsView: View {
             Section("Images") {
                 Toggle(isOn: $settings.trustParentFolders) {
                     Text("Load images from parent folders")
-                    Text("Markdown images normally load only from the notebook's folder and its subfolders. Turn this on to also allow paths like ../figures/plot.png. Applies to the app and Quick Look.")
+                    Text("Markdown images normally load only from the notebook's folder and its subfolders. Turn this on to let relative paths like ../figures/plot.png reach outside it, to any folder above. Applies to the app and Quick Look.")
                 }
                 Toggle(isOn: $settings.loadRemoteImages) {
                     Text("Load remote images")
